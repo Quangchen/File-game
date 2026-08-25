@@ -1,0 +1,120 @@
+﻿ĐỌC KỸ
+- Để sử dụng tính năng auto luyện ngọc thì viên ngọc cần luyện phải từ cấp 2 trở lên.
+- Chỉ để viên ngọc cần luyện và ngọc rác trong hành trang.
+- Những viên ngọc khác thì cất vào rương.
+******
+Nguyên lý của pb mod:
+- Pb sẽ quét và chọn những viên ngọc rác cấp độ 1 và không khóa trong hành trang để luyện.
+*********
+
+Lệnh chat:
+------> new by chén <-----
+ldgt: Auto lãnh địa gia tộc(tt,tp)
+anpcgt: Gọi tv đi anpc
+ups : up siêu cấp
+aln: Bật/tắt auto luyện ngọc ô 0
+setln: Cài đặt auto luyện ngọc
+setln có ô Delay quét hành trang (s), mặc định 15s
+setln có tick Săn ngọc max: chọn loại ngọc 652-655 và dòng VK/TB/TS cần giữ, ngọc đạt max sẽ không bị dùng làm phôi
+atts: auto tà thú solo
+gopgtX: góp Xm xu gt
+anpc: auto spam npc
+-----><-----
+lh: Auto lật hình
+jgt: Auto chờ vào LGDT
+adv: Auto NVDV
+set: Cài đặt NVDV
+nl: Auto thua lôi đài
+nhan: Auto chờ nhận đồ
+gui: Auto giao dịch đồ đã gom
+gomdo/gdngay: Giao dịch đồ đã gom ngay theo Cài đặt Gom Đồ
+
+sX: Hack tốc độ chạy X
+rs: Reset tốc chạy
+nX: Fake tầm ngang X
+cX: Fake tầm cao X
+mX: Fake lan X quái
+rsk: Reset fake tầm lan skill
+u: Khinh công
+d: Độn thổ
+l: Dịch trái
+r: Dịch phải
+g: Goto
+ta: Bật menu thức ăn
+sw: Bật gian hàng bán item lên shinwa
+aq: Ẩn quái
+xX: Khoảng cách nhặt
+ktsX: Khoảng cách tàn sát X
+tsX: Tàn sát quái level X
+tsxZ: Tàn sát quái có id Z
+tsa: Tàn sát all
+anv: Auto Nhiệm Vụ Hằng Ngày
+att: Auto Tà Thú
+ak: Bật/tắt tự đánh
+pk: Bật/tắt auto pk
+kX: Chuyển khu X
+ltd: Lưu tọa độ
+nmX: Next map
+gmX: Go map id X
+npcX: Dịch chuyển đến NPC id X
+hs: Next to hirosaki
+hr: Next to haruna
+oz: Next to Oozaka
+kj: Next to Kojin
+sz: Next to Sanzu
+tn: Next to Tone
+lc: Next to Làng chài
+ck: Next to Chakumi
+eg: Next to Echigo
+os: Next to Oshin
+mnv: Next to Map Nhiệm Vụ
+mnvp: Next to Map Nhiệm Vụ Phụ
+add: Thêm vật phẩm X vào ds nhặt
+del: Xóa vật phẩm khỏi ds nhặt
+aitX: Thêm item X vào danh sách nhặt
+ditX: Xóa item X khỏi danh sách nhặt
+cnhat: Bật nhặt xa/hút vật phẩm
+ruong: Mở hành trang
+die: Tự sát
+dcvt: Bật/tắt đánh chuyển vị trí
+avt: Thêm vị trí
+dvt: Xóa hết vị trí
+dvtxZ: Xóa vị trí Z
+dck: Bật/tắt đánh chuyển khu
+glv: Bật/tắt giữ level
+addn: Thêm nhóm
+cn: Xóa nhóm
+pt: PT nhóm
+sn: Lưu nhóm
+tsnX: Tàn sát nhóm quái lv X
+tsnxX: Tàn sát nhóm quái id X
+tsan: Tàn sát nhóm all
+attn: Auto Tà Thú Nhóm
+buff: Bật Buff HS Xa
+bux: Bật Buff Xa
+hsx: Bật HS Xa
+cy: Xem yên up
+clv: Xem lv up
+pkb: PK boss
+pkk: PK boss
+tb: Tìm boss
+sell: Auto sell
+nhan: Auto nhận đồ
+hd9x: Đi hang động 9x
+menuhd9x: Cài đặt auto hang động 9x
+menuboss: Cài đặt auto boss LC, LTT, VDMQ
+boss: Săn boss ngay theo khu vực đã chọn
+bossall: Chạy thử auto boss đã chọn
+full: set full vị trí hd9x
+kpk: Khu PK
+cpk: Xóa DS pk
+apk: Thêm vào DS pk
+dpk: Xóa khỏi DS pk
+chs: Xóa DS hồi sinh
+ahs: Thêm vào DS hồi sinh
+dhs: Xóa khỏi DS hồi sinh
+hsl: Bật/tắt hồi sinh lượng
+setchat/menuchat: Cài đặt Auto Chat
+achat/autochat: Bật/tắt Auto Chat
+achatnow/chatnow: Gửi ngay 1 câu Auto Chat
+stopchat: Dừng Auto Chat

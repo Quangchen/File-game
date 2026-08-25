@@ -1,0 +1,13 @@
+/build/
+/dist/
+/nbproject/private/
+/tools/
+/KudoCipherTool_Java_GUI/
+/*.zip
+*.class
+*.log
+*.tmp
+*.bak
+*.orig
+*.rej
+*.iml
