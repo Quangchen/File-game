@@ -299,7 +299,7 @@ public final class Stanima extends Auto {
 
                             if (this.ab && this.k() && var8 != null && var12.nClass.classId == 6) {
                                 for (var3 = 0; var3 < var12.vSkillFight.size(); ++var3) {
-                                    if ((var15 = (Skill) var12.vSkillFight.elementAt(var3)) != null && !var15.isCooldown() && var15.template.type == 2 && (var15.template.id < 67 || var15.template.id > 72) && (var15.template.id != 47 || var8.cHP < var8.cMaxHP * Char.aHpValue / 100)) {
+                                    if ((var15 = (Skill) var12.vSkillFight.elementAt(var3)) != null && !var15.isCooldown() && var15.template.type == 2 && !Auto.isPhanThanSkillId(var15.template.id) && (var15.template.id != 47 || var8.cHP < var8.cMaxHP * Char.aHpValue / 100)) {
                                         try {
                                             System.currentTimeMillis();
 

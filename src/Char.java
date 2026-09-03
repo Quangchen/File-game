@@ -916,7 +916,7 @@ public class Char extends MainObject {
         if (this.bl && tickAutoBuff && Code.auto == null && !TileMap.ag && getMyChar().statusMe != 14 && getMyChar().statusMe != 5 && this.cHP > 0 && System.currentTimeMillis() - this.gy > 500L) {
             for (var1 = 0; var1 < this.vSkill.size(); ++var1) {
                 boolean var9 = false;
-                if (((var12 = (Skill) this.vSkill.elementAt(var1)).template.id < 67 || var12.template.id > 72) && var12 != null && var12.template.type == 2 && !var12.isCooldown()) {
+                if ((var12 = (Skill) this.vSkill.elementAt(var1)) != null && !Auto.isPhanThanSkillId(var12.template.id) && var12.template.type == 2 && !var12.isCooldown()) {
                     for (var5 = 0; var5 < this.vEff.size(); ++var5) {
                         Effect var17;
                         if ((var17 = (Effect) this.vEff.elementAt(var5)) != null && var17.e.c == var12.template.iconId) {
@@ -8633,6 +8633,13 @@ public class Char extends MainObject {
             return false;
         }
         if (AutoDV.canPickCrystalForUpgrade(var0)) {
+            if (!pickNeedsNewSlot(var0)) {
+                return true;
+            }
+            refreshPickReserve();
+            return countNullSlot() - reservedPickSlots > 0;
+        }
+        if (AutoUpFullSupport.canPickCrystalForUpgrade(var0)) {
             if (!pickNeedsNewSlot(var0)) {
                 return true;
             }

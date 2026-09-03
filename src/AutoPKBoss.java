@@ -175,7 +175,7 @@ public final class AutoPKBoss extends Auto {
                             
                             if ((var14 = (Skill)var1.vSkillFight.elementAt(var13)) != null && System.currentTimeMillis() - var14.lastTimeUseThisSkill >= (long)var14.coolDown - 300L) {
                                 if (var14.template.type == 2) {
-                                    if ((var1.d == null && Char.dk || var14.template.id < 67 || var14.template.id > 72) && (Char.dl || var14.template.id != 31) && (var14.template.id != 15 || var1.cHP < var1.cMaxHP * Char.aHpValue / 100 && var1.isHuman) && (var14.template.id != 6 || var1.isHuman)) {
+                                    if ((var1.d == null && Char.dk || !Auto.isPhanThanSkillId(var14.template.id)) && (Char.dl || var14.template.id != 31) && (var14.template.id != 15 || var1.cHP < var1.cMaxHP * Char.aHpValue / 100 && var1.isHuman) && (var14.template.id != 6 || var1.isHuman)) {
                                         var15 = (int)(System.currentTimeMillis() / 1000L);
                                         int var16 = 0;
                                         

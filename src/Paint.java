@@ -15,6 +15,7 @@ public final class Paint {
 
    public static void a(mGraphics var0, Command var1, Command var2, Command var3) {
       if (FormToiUu.shouldHideGameButtons()) {
+         paintOptimizeCommandBorders(var0, var1, var2, var3);
          return;
       }
       mFont var4 = GameCanvas.isTouch ? mFont.tahoma_7b_yellow : mFont.tahoma_8b;
@@ -82,6 +83,58 @@ public final class Paint {
          }
       }
 
+   }
+
+   private static void paintOptimizeCommandBorders(mGraphics var0, Command var1, Command var2, Command var3) {
+      if (var1 != null && hasPaintCommand(var1)) {
+         paintOptimizeCommandBorder(var0, var1, 0);
+      }
+
+      if (var2 != null && hasPaintCommand(var2)) {
+         paintOptimizeCommandBorder(var0, var2, 1);
+      }
+
+      if (var3 != null && hasPaintCommand(var3)) {
+         paintOptimizeCommandBorder(var0, var3, 2);
+      }
+   }
+
+   private static boolean hasPaintCommand(Command var0) {
+      return var0.e != null || var0.caption != null && var0.caption.length() > 0;
+   }
+
+   private static void paintOptimizeCommandBorder(mGraphics var0, Command var1, int var2) {
+      int var3;
+      int var4;
+      int var5;
+      int var6;
+      if (var1.x > 0 && var1.y > 0) {
+         var3 = var1.x - 3;
+         var4 = var1.y - 3;
+         var5 = var1.w + 6;
+         var6 = var1.h + 6;
+      } else {
+         var5 = mScreen.cmdW;
+         var6 = mScreen.cmdH + 10;
+         var4 = GameCanvas.height - mScreen.cmdH - 5;
+         if (var2 == 1) {
+            var3 = GameCanvas.width - mScreen.cmdW >> 1;
+         } else if (var2 == 2) {
+            var3 = GameCanvas.width - mScreen.cmdW;
+         } else {
+            var3 = 0;
+         }
+      }
+
+      drawOptimizeBorder(var0, var3, var4, var5, var6);
+   }
+
+   private static void drawOptimizeBorder(mGraphics var0, int var1, int var2, int var3, int var4) {
+      var0.setColor(16711680);
+      var0.drawRect(var1, var2, var3, var4);
+      if (var3 > 4 && var4 > 4) {
+         var0.drawRect(var1 + 1, var2 + 1, var3 - 2, var4 - 2);
+      }
    }
 
    public static void a(mGraphics var0) {

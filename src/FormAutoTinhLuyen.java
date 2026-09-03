@@ -34,6 +34,7 @@ public final class FormAutoTinhLuyen implements CommandListener {
     public static boolean AutoCombineStone = true;
     public static boolean UseCatalystStone = false;
     public static boolean ReEquipWhenDone = true;
+    public static boolean AutoRun = false;
     public static int SlotMask = 0;
 
     private final Form form = new Form("Auto Tinh Luyện");
@@ -56,6 +57,8 @@ public final class FormAutoTinhLuyen implements CommandListener {
         "Trang bị thú"
     };
     private static final int[] SLOT_TYPES = new int[]{1, 7, 6, 9, 8, 12, 0, 2, 4, 3, 5, -1};
+    private static final int MOUNT_EQUIP_TYPE_START = 29;
+    private static final int MOUNT_EQUIP_TYPE_END = 32;
     private final ChoiceGroup modeChoice;
     private final ChoiceGroup slotChoice;
     private final ChoiceGroup actionChoice;
@@ -106,6 +109,7 @@ public final class FormAutoTinhLuyen implements CommandListener {
         this.form.append("Trạng thái: " + AutoTinhLuyen.getStatusText() + "\n");
         this.form.append("Dịch chuyển cần đồ +12 và 20 item 454.\n");
         this.form.append("Tinh luyện dùng 455/456/457 theo cấp, chạy ngầm không cần mở UI.\n");
+        this.form.append("Tự chạy lại: " + (AutoRun ? "Bật" : "Tắt") + "\n");
         this.form.append(this.modeChoice);
         this.form.append(this.slotChoice);
         this.form.append(this.actionChoice);
@@ -205,7 +209,7 @@ public final class FormAutoTinhLuyen implements CommandListener {
         int count = 0;
         for (int i = 0; i < SLOT_TYPES.length; ++i) {
             if (isSlotChoiceSelected(i)) {
-                count += SLOT_TYPES[i] == -1 ? 5 : 1;
+                count += SLOT_TYPES[i] == -1 ? MOUNT_EQUIP_TYPE_END - MOUNT_EQUIP_TYPE_START + 1 : 1;
             }
         }
 
@@ -217,7 +221,7 @@ public final class FormAutoTinhLuyen implements CommandListener {
             }
 
             if (SLOT_TYPES[i] == -1) {
-                for (int type = 29; type <= 33; ++type) {
+                for (int type = MOUNT_EQUIP_TYPE_START; type <= MOUNT_EQUIP_TYPE_END; ++type) {
                     types[pos++] = type;
                 }
             } else {
@@ -239,7 +243,7 @@ public final class FormAutoTinhLuyen implements CommandListener {
             }
 
             if (SLOT_TYPES[i] == -1) {
-                if (type >= 29 && type <= 33) {
+                if (type >= MOUNT_EQUIP_TYPE_START && type <= MOUNT_EQUIP_TYPE_END) {
                     return true;
                 }
             } else if (SLOT_TYPES[i] == type) {
@@ -248,6 +252,17 @@ public final class FormAutoTinhLuyen implements CommandListener {
         }
 
         return false;
+    }
+
+    public static boolean isAutoRun() {
+        load();
+        return AutoRun;
+    }
+
+    public static void setAutoRun(boolean value) {
+        load();
+        AutoRun = value;
+        save();
     }
 
     private static boolean isSlotChoiceSelected(int index) {
@@ -309,6 +324,7 @@ public final class FormAutoTinhLuyen implements CommandListener {
             dataout.writeBoolean(UseCatalystStone);
             dataout.writeBoolean(ReEquipWhenDone);
             dataout.writeInt(SlotMask);
+            dataout.writeBoolean(AutoRun);
             dataout.flush();
             byte[] data = byteout.toByteArray();
             rs = RecordStore.openRecordStore(STORE_NAME, true);
@@ -357,6 +373,11 @@ public final class FormAutoTinhLuyen implements CommandListener {
             ReEquipWhenDone = datain.readBoolean();
             if (bytein.available() >= 4) {
                 SlotMask = datain.readInt();
+            }
+            if (bytein.available() > 0) {
+                AutoRun = datain.readBoolean();
+            } else {
+                AutoRun = false;
             }
         } catch (Exception e) {
         } finally {

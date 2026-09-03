@@ -15,6 +15,9 @@ public final class AutoDoiLongDen implements Runnable {
     private static final int[] BASE_LANTERN_IDS = new int[]{568, 569, 570, 571};
     private static final int FASHION_LANTERN_MIN = 1048;
     private static final int FASHION_LANTERN_MAX = 1055;
+    private static final int OPTION_LANTERN_MARKER = 64;
+    private static final int OPTION_NOT_FOUND = -2147483648;
+    private static final int OPTION_MARKER_MATCH = 2147483647;
     private static final int REQUIRED_EMPTY_SLOT = 1;
     private static final int PRODUCER_RESERVE_EXTRA_SLOT = 1;
     private static final long BOX_TIMEOUT = 8000L;
@@ -520,8 +523,14 @@ public final class AutoDoiLongDen implements Runnable {
                 continue;
             }
             ++valid;
-            int param = getOptionParam(item, rule.optionId);
-            if (rule.onlyExists ? param != -2147483648 : param >= rule.minParam) {
+            boolean passed;
+            if (rule.exactParam) {
+                passed = hasOptionParam(item, rule.optionId, rule.minParam);
+            } else {
+                int param = getRuleOptionParam(item, rule.optionId);
+                passed = rule.onlyExists ? param != OPTION_NOT_FOUND : param >= rule.minParam;
+            }
+            if (passed) {
                 ++ok;
                 if (!requireAll) {
                     return true;
@@ -532,6 +541,15 @@ public final class AutoDoiLongDen implements Runnable {
         }
 
         return valid > 0 && ok == valid;
+    }
+
+    private static int getRuleOptionParam(Item item, int optionId) {
+        int direct = getOptionParam(item, optionId);
+        if (direct != OPTION_NOT_FOUND) {
+            return direct;
+        }
+
+        return hasLanternMarkerOption(item, optionId) ? OPTION_MARKER_MATCH : OPTION_NOT_FOUND;
     }
 
     private static Rule parseRule(String text) {
@@ -554,7 +572,7 @@ public final class AutoDoiLongDen implements Runnable {
             }
             pos = s.indexOf(":");
             if (pos >= 0) {
-                return new Rule(Integer.parseInt(s.substring(0, pos).trim()), Integer.parseInt(s.substring(pos + 1).trim()), false);
+                return new Rule(Integer.parseInt(s.substring(0, pos).trim()), Integer.parseInt(s.substring(pos + 1).trim()), false, true);
             }
             return new Rule(Integer.parseInt(s), 0, true);
         } catch (Exception e) {
@@ -564,10 +582,10 @@ public final class AutoDoiLongDen implements Runnable {
 
     private static int getOptionParam(Item item, int optionId) {
         if (item == null || item.options == null) {
-            return -2147483648;
+            return OPTION_NOT_FOUND;
         }
 
-        int best = -2147483648;
+        int best = OPTION_NOT_FOUND;
         for (int i = 0; i < item.options.size(); ++i) {
             ItemOption option = (ItemOption)item.options.elementAt(i);
             if (option != null && option.optionTemplate != null && option.optionTemplate.id == optionId && option.param > best) {
@@ -575,6 +593,34 @@ public final class AutoDoiLongDen implements Runnable {
             }
         }
         return best;
+    }
+
+    private static boolean hasOptionParam(Item item, int optionId, int param) {
+        if (item == null || item.options == null) {
+            return false;
+        }
+
+        for (int i = 0; i < item.options.size(); ++i) {
+            ItemOption option = (ItemOption)item.options.elementAt(i);
+            if (option != null && option.optionTemplate != null && option.optionTemplate.id == optionId && option.param == param) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean hasLanternMarkerOption(Item item, int optionId) {
+        if (item == null || item.options == null) {
+            return false;
+        }
+
+        for (int i = 0; i < item.options.size(); ++i) {
+            ItemOption option = (ItemOption)item.options.elementAt(i);
+            if (option != null && option.optionTemplate != null && option.optionTemplate.id == OPTION_LANTERN_MARKER && option.param == optionId) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static Item waitNewFashionLantern(int[] before, long timeout) {
@@ -783,11 +829,17 @@ public final class AutoDoiLongDen implements Runnable {
         int optionId;
         int minParam;
         boolean onlyExists;
+        boolean exactParam;
 
         Rule(int optionId, int minParam, boolean onlyExists) {
+            this(optionId, minParam, onlyExists, false);
+        }
+
+        Rule(int optionId, int minParam, boolean onlyExists, boolean exactParam) {
             this.optionId = optionId;
             this.minParam = minParam;
             this.onlyExists = onlyExists;
+            this.exactParam = exactParam;
         }
     }
 

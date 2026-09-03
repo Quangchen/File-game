@@ -24,6 +24,9 @@ public final class AutoNpc extends Auto {
     public final void run() {
         if (running) {
             GameScr.chatPopup("Auto NPC đang chạy");
+            if (Code.auto == this && this.instance != null) {
+                Code.backToInstance();
+            }
             return;
         }
         if (super.isDead()) {
@@ -82,7 +85,9 @@ public final class AutoNpc extends Auto {
             GameScr.chatPopup("Lỗi Auto NPC");
         } finally {
             running = false;
-            Code.backToInstance();
+            if (Code.auto == this) {
+                Code.backToInstance();
+            }
         }
     }
 

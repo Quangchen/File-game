@@ -1,11 +1,13 @@
 public final class AutoBossSchedule extends Auto {
 
-    private static final long SESSION_TIMEOUT = 900000L;
+    private static final long SESSION_TIMEOUT = 7200000L;
     private static final long MAP_WAIT = 1200L;
-    private static final long ZONE_WAIT = 900L;
-    private static final long ZONE_SCAN_GRACE = 4500L;
+    private static final long ZONE_WAIT = 2000L;
+    private static final long ZONE_SCAN_GRACE = 2000L;
+    private static final long DEATH_RECOVER_SCAN_GRACE = 15000L;
     private static final long BOSS_GONE_CONFIRM_WAIT = 3500L;
-    private static final long RETRY_DELAY = 1800L;
+    private static final long RETRY_DELAY = 2000L;
+    private static final long ZONE_RETRY_STUCK_WAIT = 2500L;
     private static final int MAX_ZONE_RETRIES = 4;
     private static final int LANG_CO_ZONE_COUNT = 15;
     private static final int LANG_TT_ZONE_COUNT = 15;
@@ -30,6 +32,8 @@ public final class AutoBossSchedule extends Auto {
     private int zoneRequestAttempts = 0;
     private int bossId = -1;
     private int killedBossCount = 0;
+    private int mapStartKillCount = 0;
+    private boolean zoneCountFromServer = false;
     private long startedAt = System.currentTimeMillis();
     private long mapAt = 0L;
     private long zoneListAt = 0L;
@@ -39,6 +43,9 @@ public final class AutoBossSchedule extends Auto {
     private long buyKhaDiAt = 0L;
     private long lastDeathRemapAt = 0L;
     private boolean recoveringAfterDeath = false;
+    private int recoverMapIndex = -1;
+    private int recoverZone = -1;
+    private long recoverScanUntil = 0L;
     private long recoverNoticeAt = 0L;
 
     public AutoBossSchedule(int eventType) {
@@ -49,7 +56,7 @@ public final class AutoBossSchedule extends Auto {
         super.isHang = false;
         super.k = -1;
         super.l = -1;
-        GameScr.chatPopup("Auto boss: bắt đầu quét " + this.maps.length + " map");
+        GameScr.chatPopup(this.maps.length > 0 ? "Auto boss: bắt đầu quét " + this.maps.length + " map" : "Auto boss: không có map hợp lệ");
     }
 
     protected final void run() {
@@ -59,11 +66,7 @@ public final class AutoBossSchedule extends Auto {
         }
 
         if (super.isDead()) {
-            this.recoveringAfterDeath = true;
-            this.bossId = -1;
-            this.bossGoneAt = 0L;
-            this.loadedZone = -1;
-            this.zoneScanAt = 0L;
+            this.markDeathRecoveryPoint();
             if (System.currentTimeMillis() - this.lastDeathRemapAt < 3000L) {
                 return;
             }
@@ -74,10 +77,14 @@ public final class AutoBossSchedule extends Auto {
         }
 
         if (this.mapIndex >= this.maps.length) {
+            if (this.restoreRecoverPointIfNeeded()) {
+                return;
+            }
             this.finish();
             return;
         }
 
+        this.restoreRecoverPointIfNeeded();
         int targetMap = this.maps[this.mapIndex];
         this.enableTicketRoute(targetMap);
 
@@ -102,6 +109,7 @@ public final class AutoBossSchedule extends Auto {
         }
 
         if (this.recoveringAfterDeath) {
+            this.restoreRecoverPointIfNeeded();
             if (this.zoneCount > 0 && this.scanZone >= 0 && TileMap.zoneID != this.scanZone) {
                 this.changeScanZone(this.scanZone);
                 return;
@@ -110,6 +118,8 @@ public final class AutoBossSchedule extends Auto {
             this.recoveringAfterDeath = false;
             this.loadedZone = -1;
             this.zoneScanAt = 0L;
+            this.mapAt = 0L;
+            this.recoverScanUntil = System.currentTimeMillis() + DEATH_RECOVER_SCAN_GRACE;
             GameScr.chatPopup("Auto boss: đã quay lại, tiếp tục săn");
         }
 
@@ -148,7 +158,7 @@ public final class AutoBossSchedule extends Auto {
         Mob boss = findBoss();
 
         if (boss != null) {
-            this.bossId = boss.id;
+            this.bossId = getBossAttackId(boss);
             this.bossGoneAt = 0L;
             this.pickUpItem(-1);
             this.attack(this.bossId, -1);
@@ -170,9 +180,14 @@ public final class AutoBossSchedule extends Auto {
             this.killedBossCount++;
             this.bossId = -1;
             this.bossGoneAt = 0L;
+            if (isSingleBossMap(targetMap) && this.killedBossCount > this.mapStartKillCount) {
+                this.nextMap();
+                return;
+            }
         }
 
-        if (System.currentTimeMillis() - this.zoneScanAt < ZONE_SCAN_GRACE) {
+        if (System.currentTimeMillis() - this.zoneScanAt < ZONE_SCAN_GRACE
+                || System.currentTimeMillis() < this.recoverScanUntil) {
             return;
         }
 
@@ -196,7 +211,16 @@ public final class AutoBossSchedule extends Auto {
         }
 
         if (this.zoneRequestAttempts >= MAX_ZONE_RETRIES) {
-            GameScr.chatPopup("Auto boss: bỏ qua khu " + zone);
+            if (this.shouldRetryZoneUntilLoaded()) {
+                GameScr.chatPopup("Auto boss: kẹt khu " + zone + ", thử lại");
+                this.requestedZone = -1;
+                this.zoneRequestAttempts = 0;
+                this.zoneAt = now + ZONE_RETRY_STUCK_WAIT - RETRY_DELAY;
+                this.resetZoneScan();
+                return;
+            }
+
+            GameScr.chatPopup("Auto boss: bỏ qua khu dự phòng " + zone);
             this.scanZone++;
             this.requestedZone = -1;
             this.zoneRequestAttempts = 0;
@@ -213,20 +237,28 @@ public final class AutoBossSchedule extends Auto {
 
     private void requestZoneCount() {
         long now = System.currentTimeMillis();
-        int knownZoneCount = getKnownZoneCount(TileMap.mapID);
+        int strictZoneCount = getStrictZoneCount(TileMap.mapID);
 
-        if (knownZoneCount > 0) {
-            this.applyZoneCount(knownZoneCount);
-            return;
-        }
-
-        if (now - this.zoneListAt < RETRY_DELAY) {
+        if (strictZoneCount > 0) {
+            this.applyZoneCount(strictZoneCount, true);
+            GameScr.chatPopup("Auto boss: map " + TileMap.mapID + " quét khu 0-" + (strictZoneCount - 1));
             return;
         }
 
         if (this.zoneListAttempts >= MAX_ZONE_RETRIES) {
+            int knownZoneCount = getKnownZoneCount(TileMap.mapID);
+            if (knownZoneCount > 0) {
+                GameScr.chatPopup("Auto boss: dùng số khu dự phòng " + knownZoneCount);
+                this.applyZoneCount(knownZoneCount, false);
+                return;
+            }
+
             GameScr.chatPopup("Auto boss: bỏ qua map " + TileMap.mapID);
             this.nextMap();
+            return;
+        }
+
+        if (now - this.zoneListAt < RETRY_DELAY) {
             return;
         }
 
@@ -290,34 +322,35 @@ public final class AutoBossSchedule extends Auto {
             return false;
         }
 
-        this.zoneCount = count;
-        this.scanZone = 0;
-        this.requestedZone = -1;
-        this.resetZoneScan();
-        this.zoneListAttempts = 0;
-        this.zoneRequestAttempts = 0;
+        this.applyZoneCount(count, true);
         GameScr.chatPopup("Auto boss: map " + TileMap.mapID + " có " + this.zoneCount + " khu");
         return true;
     }
 
     private void applyZoneCount(int count) {
+        this.applyZoneCount(count, false);
+    }
+
+    private void applyZoneCount(int count, boolean fromServer) {
         if (count <= 0) {
             count = TileMap.zoneID + 1;
         }
 
         this.zoneCount = count;
+        this.zoneCountFromServer = fromServer;
         this.scanZone = 0;
         this.requestedZone = -1;
         this.resetZoneScan();
         this.zoneListAttempts = 0;
         this.zoneRequestAttempts = 0;
-        GameScr.chatPopup("Auto boss: map " + TileMap.mapID + " co " + this.zoneCount + " khu");
     }
 
     private void nextMap() {
         this.mapIndex++;
+        this.mapStartKillCount = this.killedBossCount;
         this.scanZone = 0;
         this.zoneCount = -1;
+        this.zoneCountFromServer = false;
         this.requestedZone = -1;
         this.resetZoneScan();
         this.zoneListAttempts = 0;
@@ -326,6 +359,7 @@ public final class AutoBossSchedule extends Auto {
         this.bossGoneAt = 0L;
         this.mapAt = 0L;
         this.zoneListAt = 0L;
+        this.recoverScanUntil = 0L;
 
         if (this.mapIndex < this.maps.length) {
             super.mapID = this.maps[this.mapIndex];
@@ -381,10 +415,61 @@ public final class AutoBossSchedule extends Auto {
         }
 
         this.recoveringAfterDeath = true;
+        this.recoverMapIndex = this.mapIndex;
+        this.recoverZone = this.scanZone;
         this.bossId = -1;
         this.bossGoneAt = 0L;
         this.loadedZone = -1;
         this.zoneScanAt = 0L;
+        this.mapAt = 0L;
+        this.requestedZone = -1;
+        this.zoneRequestAttempts = 0;
+        this.zoneAt = 0L;
+    }
+
+    private void markDeathRecoveryPoint() {
+        this.recoveringAfterDeath = true;
+        if (this.mapIndex >= 0 && this.mapIndex < this.maps.length) {
+            this.recoverMapIndex = this.mapIndex;
+            super.mapID = this.maps[this.mapIndex];
+        }
+
+        if (this.zoneCount > 0 && this.scanZone >= 0 && this.scanZone < this.zoneCount) {
+            this.recoverZone = this.scanZone;
+        } else if (TileMap.mapID == super.mapID && TileMap.zoneID >= 0) {
+            this.recoverZone = TileMap.zoneID;
+            this.scanZone = TileMap.zoneID;
+        }
+
+        if (this.recoverZone >= 0) {
+            this.scanZone = this.recoverZone;
+        }
+
+        this.bossId = -1;
+        this.bossGoneAt = 0L;
+        this.loadedZone = -1;
+        this.zoneScanAt = 0L;
+        this.requestedZone = -1;
+        this.zoneRequestAttempts = 0;
+        this.zoneAt = 0L;
+        this.mapAt = 0L;
+    }
+
+    private boolean restoreRecoverPointIfNeeded() {
+        if (!this.recoveringAfterDeath || this.recoverMapIndex < 0 || this.recoverMapIndex >= this.maps.length) {
+            return false;
+        }
+
+        if (this.mapIndex != this.recoverMapIndex) {
+            this.mapIndex = this.recoverMapIndex;
+            super.mapID = this.maps[this.mapIndex];
+        }
+
+        if (this.recoverZone >= 0) {
+            this.scanZone = this.recoverZone;
+        }
+
+        return true;
     }
 
     private boolean mustLeaveSpecialRegion(int targetMap) {
@@ -431,8 +516,38 @@ public final class AutoBossSchedule extends Auto {
         return -1;
     }
 
+    private boolean shouldRetryZoneUntilLoaded() {
+        int targetMap = this.mapIndex >= 0 && this.mapIndex < this.maps.length ? this.maps[this.mapIndex] : TileMap.mapID;
+        return isStrictPerZoneBossMap(targetMap) || this.zoneCountFromServer;
+    }
+
+    private static boolean isStrictPerZoneBossMap(int map) {
+        return TileMap.isLangCo(map) || TileMap.isLangTT(map);
+    }
+
+    private static boolean isSingleBossMap(int map) {
+        return TileMap.isVDMQ(map);
+    }
+
+    private static int getStrictZoneCount(int map) {
+        if (TileMap.isLangCo(map)) {
+            return LANG_CO_ZONE_COUNT;
+        }
+
+        if (TileMap.isLangTT(map)) {
+            return LANG_TT_ZONE_COUNT;
+        }
+
+        return -1;
+    }
+
     static boolean isBossTarget(Mob mob) {
         return mob != null && (mob.isBoss || mob.id == MOB_MY_HAU_VUONG || getMobTemplateServerId(mob) == MOB_MY_HAU_VUONG) && mob.hp > 0 && mob.h != 0 && mob.h != 1;
+    }
+
+    private static int getBossAttackId(Mob mob) {
+        int serverId = getMobTemplateServerId(mob);
+        return serverId > 0 ? serverId : mob.id;
     }
 
     private static Mob findBoss() {
@@ -451,38 +566,51 @@ public final class AutoBossSchedule extends Auto {
         int count = 0;
 
         if ((eventType == 0 || eventType == 1) && FormAutoBoss.LangCo) {
-            count += MAP_LANG_CO.length;
+            count += countSelectedMaps(MAP_LANG_CO);
         }
 
         if ((eventType == 0 || eventType == 1) && FormAutoBoss.LTT) {
-            count += MAP_LTT.length;
+            count += countSelectedMaps(MAP_LTT);
         }
 
         if ((eventType == 0 || eventType == 2) && FormAutoBoss.VDMQ) {
-            count += MAP_VDMQ.length;
+            count += countSelectedMaps(MAP_VDMQ);
         }
 
         int[] result = new int[count];
         int index = 0;
 
         if ((eventType == 0 || eventType == 1) && FormAutoBoss.LangCo) {
-            index = append(result, index, MAP_LANG_CO);
+            index = appendSelected(result, index, MAP_LANG_CO);
         }
 
         if ((eventType == 0 || eventType == 1) && FormAutoBoss.LTT) {
-            index = append(result, index, MAP_LTT);
+            index = appendSelected(result, index, MAP_LTT);
         }
 
         if ((eventType == 0 || eventType == 2) && FormAutoBoss.VDMQ) {
-            append(result, index, MAP_VDMQ);
+            appendSelected(result, index, MAP_VDMQ);
         }
 
         return result;
     }
 
-    private static int append(int[] result, int index, int[] values) {
+    private static int countSelectedMaps(int[] values) {
+        int count = 0;
         for (int i = 0; i < values.length; i++) {
-            result[index++] = values[i];
+            if (FormAutoBoss.isMapAllowed(values[i])) {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    private static int appendSelected(int[] result, int index, int[] values) {
+        for (int i = 0; i < values.length; i++) {
+            if (FormAutoBoss.isMapAllowed(values[i])) {
+                result[index++] = values[i];
+            }
         }
 
         return index;

@@ -32,7 +32,7 @@ public final class FormAutoLongDen implements CommandListener {
             "Đổi bằng xu",
             "Đổi bằng lượng"
         }, (Image[])null);
-        this.ruleText = new TextField("Rule CS (87>=4500,6>=1800)", AutoDoiLongDen.ruleText, 250, TextField.ANY);
+        this.ruleText = new TextField("Rule CS (64:6,64:58 hoac 6,58)", AutoDoiLongDen.ruleText, 250, TextField.ANY);
         this.delayMs = new TextField("Delay đổi ms", String.valueOf(AutoDoiLongDen.delayMs), 8, TextField.NUMERIC);
         this.minEmptySlot = new TextField("Giữ ô trống (>=1)", String.valueOf(AutoDoiLongDen.minEmptySlot), 4, TextField.NUMERIC);
         this.menuPathXu = new TextField("Menu xu", AutoDoiLongDen.menuPathXu, 20, TextField.ANY);
@@ -56,6 +56,8 @@ public final class FormAutoLongDen implements CommandListener {
         this.form.append("Trạng thái: " + AutoDoiLongDen.getStatusText() + "\n");
         this.form.append("Cần lồng đèn 568-571 + phôi 1221. Xu: 50k, lượng: 1000.\n");
         this.form.append("CS lồng đèn: 0,1,2,3,4,5,6,8,9,57,58,87.\n");
+        this.form.append("CS co the xuat hien: 0,1,2,3,4,5,6,8,9,57,58,87.\n");
+        this.form.append("Nhap 64:6,64:58 de check dung cap option 64 va param 6/58.\n");
         this.form.append(this.options);
         this.form.append(this.currency);
         this.form.append(this.ruleText);

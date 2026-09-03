@@ -89,8 +89,9 @@ public final class Code implements Runnable {
     private static long lastClanInviteAt = 0L;
     private static long lastAutoNVHNStart = 0L;
     private static final String RMS_NSOCHEN_MENU = "NsoChenMenu";
+    private static final String RMS_NSOCHEN_TELE_TARGET = "NsoChenTeleTarget";
     public static boolean showNsoChenMenu = RMS.d(RMS_NSOCHEN_MENU) == 1;
-    public static boolean teleTarget = true;
+    public static boolean teleTarget = RMS.d(RMS_NSOCHEN_TELE_TARGET) != 0;
     public static boolean showMobNameId = false;
 
     public Code() {
@@ -134,6 +135,14 @@ public final class Code implements Runnable {
     private static void saveNsoChenMenuState() {
         try {
             RMS.writeRecord(RMS_NSOCHEN_MENU, showNsoChenMenu ? 1 : 0);
+        } catch (Exception e) {
+        }
+    }
+
+    public static void setTeleTarget(boolean enabled) {
+        teleTarget = enabled;
+        try {
+            RMS.writeRecord(RMS_NSOCHEN_TELE_TARGET, teleTarget ? 1 : 0);
         } catch (Exception e) {
         }
     }
@@ -684,6 +693,13 @@ public final class Code implements Runnable {
         }
 
         try {
+            if (AutoHalloween.isRunning()) {
+                AutoHalloween.stop();
+            }
+        } catch (Exception e) {
+        }
+
+        try {
             if (AutoLuyenNgoc.isSlot0Running()) {
                 AutoLuyenNgoc.stopSlot0();
             }
@@ -892,9 +908,12 @@ public final class Code implements Runnable {
                         AutoUseItem.update();
                         AutoChat.update();
                         AutoDoiLongDen.update();
+                        AutoTinhLuyen.updateAutoRun();
                         AutoGiftCode.updateAutoStartAfterLogin();
                         AutoRuocDen.updateSchedule();
                         AutoViThu.updateSchedule();
+                        AutoHalloween.updateSchedule();
+                        AutoNguHanhHoa.update();
                         autoTTGT(var3);
                         AutoTaskScheduler.update();
                         int var4 = Char.countNullSlot();
@@ -1689,6 +1708,8 @@ public final class Code implements Runnable {
             }
         } else if (auto instanceof As10) {
             return itemTemplate.type == 19;
+        } else if (AutoUpFullSupport.canPickCrystalForUpgrade(itemTemplate)) {
+            return true;
         } else if (itemTemplate.type == 19) {
             return Char.dn;
         } else if (itemTemplate.type != 16 && itemTemplate.type != 17) {
@@ -2051,7 +2072,7 @@ public final class Code implements Runnable {
                                 GameScr.chatPopup("Menu NSO Chen: " + (showNsoChenMenu ? "Bật" : "Tắt"));
                                 return true;
                             } else if (var22.equals("tmt") || var22.equals("telemt")) {
-                                teleTarget = !teleTarget;
+                                setTeleTarget(!teleTarget);
                                 GameScr.chatPopup("Tele mục tiêu: " + (teleTarget ? "Bật" : "Tắt"));
                                 return true;
                             } else if (var22.equals("mobid") || var22.equals("tenquai")) {
@@ -2253,6 +2274,15 @@ public final class Code implements Runnable {
                                     } else if (var1.equals("hd9x")) {
                                         AutoHD9xManager.startManual();
                                         return true;
+                                    } else if (var22.equals("setht") || var22.equals("menuht") || var22.equals("menuhoatrang")) {
+                                        new FormAutoHalloween().select();
+                                        return true;
+                                    } else if (var22.equals("ht") || var22.equals("hoatrang") || var22.equals("halloween")) {
+                                        AutoHalloween.toggle();
+                                        return true;
+                                    } else if (var22.equals("stopht") || var22.equals("dunght")) {
+                                        AutoHalloween.stop();
+                                        return true;
                                     } else if (var22.equals("menuboss")) {
                                         new FormAutoBoss().select();
                                         return true;
@@ -2264,6 +2294,9 @@ public final class Code implements Runnable {
                                         return true;
                                     } else if (var22.equals("menumua") || var22.equals("menumuashop")) {
                                         new FormAutoBuyShop().select();
+                                        return true;
+                                    } else if (var22.equals("setuplv") || var22.equals("menuuplv") || var22.equals("menuupfull")) {
+                                        new FormAutoUpFull().select();
                                         return true;
                                     } else if (var22.equals("setcc") || var22.equals("menucauca")) {
                                         new FormAutoCauCa().select();
@@ -2365,6 +2398,9 @@ public final class Code implements Runnable {
                                     } else if (var22.equals("setvt") || var22.equals("menuvt") || var22.equals("menuvithu")) {
                                         new FormAutoViThu().select();
                                         return true;
+                                    } else if (var22.equals("nhh") || var22.equals("nguhanhhoa")) {
+                                        AutoNguHanhHoa.toggle();
+                                        return true;
                                     } else if (var22.equals("settrungvt")) {
                                         new FormAutoViThu().select();
                                         return true;
@@ -2415,6 +2451,8 @@ public final class Code implements Runnable {
                                         return true;
                                     } else if (var22.equals("uplv")) {
                                         return AutoUpLevel.start(value);
+                                    } else if (var22.equals("uplvfull") || var22.equals("upfull")) {
+                                        return AutoUpLevel.startFull(value);
                                     } else if (var22.equals("uplvpt")) {
                                         return AutoUpLevel.start(value, true);
                                     } else if (var22.equals("stopuplv")) {
@@ -3206,6 +3244,9 @@ public final class Code implements Runnable {
         if (AutoHD9xManager.onPrivateMessage(nameChar, msg)) {
             return;
         }
+        if (AutoHalloweenManager.onPrivateMessage(nameChar, msg)) {
+            return;
+        }
 
         if (Char.tickDanhTheoNhom && g != null && nameChar.equals(g) && !Char.getMyChar().charName.equals(g)) {
             this.d(nameChar, msg);
@@ -3376,6 +3417,9 @@ public final class Code implements Runnable {
 
     public final void d(String var1, String var2) {
         if (AutoHD9xManager.onPrivateMessage(var1, var2)) {
+            return;
+        }
+        if (AutoHalloweenManager.onPrivateMessage(var1, var2)) {
             return;
         }
 

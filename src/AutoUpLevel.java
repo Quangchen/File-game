@@ -2,7 +2,7 @@ public final class AutoUpLevel extends Auto {
 
     private static final int ITEM_PHAN_THAN_LENH = 545;
     private static final int ITEM_THI_LUYEN_THIEP = 564;
-    private static final int SHOP_PHAN_THAN_LENH = 3;
+    private static final int SHOP_PHAN_THAN_LENH = 14;
     private static final int SHOP_THI_LUYEN_THIEP = 8;
     private static final int NPC_TAJIMA = 12;
     private static final int EFFECT_VDMQ = 34;
@@ -98,6 +98,7 @@ public final class AutoUpLevel extends Auto {
     private int zoneTryCount;
     private int badMap = -1;
     private boolean usePhanThan;
+    private boolean fullMode;
     private boolean oldUsePhanThan;
     private boolean savedUsePhanThan;
     private boolean needBuyThiLuyenThiep;
@@ -106,13 +107,20 @@ public final class AutoUpLevel extends Auto {
     private long lastBuyThiLuyenThiep;
     private long lastUseThiLuyenThiep;
     private long lastSkillUp;
+    private long lastUsePhanThanLenh;
+    private int switchToCloneTry;
+    private int switchToHumanTry;
 
     public AutoUpLevel(int targetLevel) {
         this(targetLevel, false);
     }
 
     public AutoUpLevel(int targetLevel, boolean usePhanThan) {
-        this.init(targetLevel, usePhanThan);
+        this.init(targetLevel, usePhanThan, false);
+    }
+
+    public AutoUpLevel(int targetLevel, boolean usePhanThan, boolean fullMode) {
+        this.init(targetLevel, usePhanThan, fullMode);
     }
 
     public final void init(int targetLevel) {
@@ -120,9 +128,14 @@ public final class AutoUpLevel extends Auto {
     }
 
     public final void init(int targetLevel, boolean usePhanThan) {
+        this.init(targetLevel, usePhanThan, false);
+    }
+
+    public final void init(int targetLevel, boolean usePhanThan, boolean fullMode) {
         super.a();
         this.targetLevel = targetLevel;
         this.usePhanThan = usePhanThan;
+        this.fullMode = fullMode;
         this.savedUsePhanThan = false;
         this.lastLevel = -1;
         super.mapID = -1;
@@ -131,7 +144,13 @@ public final class AutoUpLevel extends Auto {
         super.isHang = false;
         super.k = -1;
         super.l = -1;
+        this.needBuyThiLuyenThiep = false;
+        this.lastCloneAction = 0L;
+        this.lastUsePhanThanLenh = 0L;
+        this.switchToCloneTry = 0;
+        this.switchToHumanTry = 0;
         this.resetMapState();
+        AutoUpFullSupport.reset();
     }
 
     public static boolean start(int targetLevel) {
@@ -167,6 +186,27 @@ public final class AutoUpLevel extends Auto {
         return true;
     }
 
+    public static boolean startFull(int targetLevel) {
+        FormAutoUpFull.load();
+        if (targetLevel <= 0) {
+            targetLevel = FormAutoUpFull.TargetLevel;
+        }
+
+        Char me = Char.getMyChar();
+        if (me == null) {
+            return true;
+        }
+
+        if (targetLevel <= 0) {
+            GameScr.chatPopup("Dung: uplvfull70");
+            return true;
+        }
+
+        Code.setAuto(new AutoUpLevel(targetLevel, false, true));
+        GameScr.chatPopup("Auto Up Tong den " + targetLevel + " (" + FormAutoUpFull.getSummary() + ")");
+        return true;
+    }
+
     public static boolean stop() {
         if (Code.auto instanceof AutoUpLevel) {
             ((AutoUpLevel) Code.auto).restorePhanThanSetting();
@@ -194,7 +234,7 @@ public final class AutoUpLevel extends Auto {
             return;
         }
 
-        if (me.cLevel >= this.targetLevel) {
+        if (!this.fullMode && me.cLevel >= this.targetLevel) {
             this.finish((this.usePhanThan ? "Auto Up PT: xong level " : "Auto Up LV: xong level ") + this.targetLevel);
             return;
         }
@@ -208,6 +248,21 @@ public final class AutoUpLevel extends Auto {
             this.lastLevel = me.cLevel;
             this.resetMapState();
             me.mobFocus = null;
+        }
+
+        if (this.fullMode && AutoUpFullSupport.handle(this, me)) {
+            this.markAutoProgress(AutoUpFullSupport.getStatusText());
+            return;
+        }
+
+        if (this.fullMode && me.cLevel >= this.targetLevel && AutoUpFullSupport.shouldWaitNextCheck()) {
+            this.markAutoProgress(AutoUpFullSupport.getStatusText());
+            return;
+        }
+
+        if (me.cLevel >= this.targetLevel) {
+            this.finish((this.fullMode ? "Auto Up Tong: xong level " : this.usePhanThan ? "Auto Up PT: xong level " : "Auto Up LV: xong level ") + this.targetLevel);
+            return;
         }
 
         int targetMap = this.selectTargetMap(me);
@@ -253,11 +308,18 @@ public final class AutoUpLevel extends Auto {
     public final String toString() {
         Char me = Char.getMyChar();
         int level = me == null ? 0 : me.cLevel;
+        if (this.fullMode) {
+            String text = AutoUpFullSupport.getStatusText();
+            return "Auto Up Tong " + level + "/" + this.targetLevel + (text.length() > 0 ? " " + text : "") + " map " + super.mapID + " khu " + TileMap.zoneID;
+        }
         return (this.usePhanThan ? "Auto Up PT " : "Auto Up LV ") + level + "/" + this.targetLevel + " map " + super.mapID + " khu " + TileMap.zoneID;
     }
 
     private void finish(String text) {
         GameScr.chatPopup(text);
+        if (this.fullMode) {
+            AutoUpFullSupport.reset();
+        }
         this.restorePhanThanSetting();
         if (Code.auto == this) {
             Code.backToInstance();
@@ -292,6 +354,7 @@ public final class AutoUpLevel extends Auto {
         }
 
         if (!me.isHuman) {
+            this.switchToCloneTry = 0;
             return false;
         }
 
@@ -355,6 +418,7 @@ public final class AutoUpLevel extends Auto {
             return false;
         }
 
+        this.switchToCloneTry = 0;
         Skill skill = this.findCloneSkill(me);
         if (skill == null) {
             this.finish("Auto Up PT: chua co skill phan than");
@@ -362,34 +426,107 @@ public final class AutoUpLevel extends Auto {
         }
 
         long now = System.currentTimeMillis();
-        if (Char.k(ITEM_PHAN_THAN_LENH) <= 0) {
-            if (now - this.lastBuyPhanThanLenh > BUY_RETRY_DELAY) {
-                this.lastBuyPhanThanLenh = now;
-                this.popupSlow("PT: mua phan than lenh");
-                AutoBuyShop.buyNow(ITEM_PHAN_THAN_LENH, SHOP_PHAN_THAN_LENH, 1);
-            }
-            return true;
-        }
+        boolean hasItem = Char.getIndexItemById(ITEM_PHAN_THAN_LENH) >= 0;
+        boolean skillInFight = this.isCloneSkillInFightList(me, skill);
 
-        if (skill.isCooldown()) {
-            return true;
-        }
-
-        if (me.cMP < skill.manaUse) {
+        if (!skill.isCooldown() && skillInFight && me.cMP < skill.manaUse) {
             me.e(17);
             Auto.sleep(500L);
             return true;
         }
 
-        if (now - this.lastCloneAction > ACTION_DELAY) {
+        if (!skill.isCooldown() && skillInFight && now - this.lastCloneAction > ACTION_DELAY) {
             this.lastCloneAction = now;
-            Service.getInstance().selectSkill(skill.template.id);
-            Service.getInstance().r();
-            Auto.sleep(700L);
-            this.popupSlow("PT: goi phan than");
+            this.usePhanThanSkill(me, skill);
+            this.popupSlow("PT: goi Kage Bunshin " + skill.template.id);
+            if (this.waitCloneCreated(2500L)) {
+                return true;
+            }
+
+            hasItem = Char.getIndexItemById(ITEM_PHAN_THAN_LENH) >= 0;
+        }
+
+        if (hasItem && now - this.lastUsePhanThanLenh > 3500L) {
+            this.lastUsePhanThanLenh = now;
+            this.popupSlow(skillInFight ? "PT: dung phan than lenh" : "PT: dung lenh goi PT");
+            if (this.usePhanThanLenhFallback()) {
+                return true;
+            }
+        }
+
+        if (Char.getMyChar() != null && Char.getMyChar().d == null && !hasItem && now - this.lastBuyPhanThanLenh > BUY_RETRY_DELAY) {
+            this.lastBuyPhanThanLenh = now;
+            this.popupSlow("PT: mua phan than lenh");
+            AutoBuyShop.buyNow(ITEM_PHAN_THAN_LENH, SHOP_PHAN_THAN_LENH, 1);
         }
 
         return true;
+    }
+
+    private void usePhanThanSkill(Char me, Skill skill) {
+        try {
+            if (me == null || skill == null || skill.template == null) {
+                return;
+            }
+
+            Skill oldSkill = me.selectSkill;
+            me.selectSkill = skill;
+            me.gi = skill;
+            Service.getInstance().selectSkill(skill.template.id);
+            Auto.sleep(250L);
+            Service.getInstance().r();
+            LockGame.ab();
+            if (oldSkill != null && oldSkill != skill && Char.getMyChar() != null) {
+                Char.getMyChar().selectSkill = oldSkill;
+                Char.getMyChar().gi = oldSkill;
+            }
+            me.m();
+        } catch (Exception e) {
+        }
+    }
+
+    private boolean usePhanThanLenhFallback() {
+        try {
+            int index = Char.getIndexItemById(ITEM_PHAN_THAN_LENH);
+            if (index >= 0) {
+                Service.getInstance().useItem(index);
+                LockGame.ab();
+                return this.waitCloneCreated(2500L);
+            }
+        } catch (Exception e) {
+        }
+
+        return false;
+    }
+
+    private boolean waitCloneCreated(long timeout) {
+        long end = System.currentTimeMillis() + timeout;
+        while (System.currentTimeMillis() < end) {
+            Char me = Char.getMyChar();
+            if (me != null && me.d != null) {
+                return true;
+            }
+
+            Auto.sleep(250L);
+        }
+
+        Char me = Char.getMyChar();
+        return me != null && me.d != null;
+    }
+
+    private boolean isCloneSkillInFightList(Char me, Skill skill) {
+        if (me == null || skill == null || skill.template == null || me.vSkillFight == null) {
+            return false;
+        }
+
+        for (int i = 0; i < me.vSkillFight.size(); ++i) {
+            Skill fightSkill = (Skill) me.vSkillFight.elementAt(i);
+            if (fightSkill != null && fightSkill.template != null && fightSkill.template.id == skill.template.id) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private boolean upCloneSkillIfPossible(Char me) {
@@ -430,56 +567,137 @@ public final class AutoUpLevel extends Auto {
     }
 
     private boolean switchToClone() {
+        Char me = Char.getMyChar();
+        if (me == null) {
+            return true;
+        }
+
+        if (!me.isHuman) {
+            this.switchToCloneTry = 0;
+            return false;
+        }
+
+        if (me.d == null) {
+            this.switchToCloneTry = 0;
+            return this.ensureCloneSummoned(me);
+        }
+
+        if (TileMap.mapID != 22) {
+            this.goMap(22, -2, -1, -1);
+            return true;
+        }
+
         long now = System.currentTimeMillis();
         if (now - this.lastCloneAction <= ACTION_DELAY) {
             return true;
         }
 
         this.lastCloneAction = now;
-        this.useTajima(3);
-        this.popupSlow("PT: chuyen thu than");
-        Auto.sleep(1000L);
+        ++this.switchToCloneTry;
+        this.useTajimaSwitch(3, false);
+        this.popupSlow("PT: chuyen thu than " + this.switchToCloneTry);
+        if (this.waitPhanThanState(false, 3500L)) {
+            this.switchToCloneTry = 0;
+            return true;
+        }
+
+        me = Char.getMyChar();
+        if (this.switchToCloneTry >= 3 && me != null && me.isHuman) {
+            me.d = null;
+            this.switchToCloneTry = 0;
+            this.lastCloneAction = 0L;
+            this.popupSlow("PT: goi lai Kage Bunshin");
+        }
+
         return true;
     }
 
     private boolean switchToHuman() {
+        Char me = Char.getMyChar();
+        if (me == null) {
+            return true;
+        }
+
+        if (me.isHuman) {
+            this.switchToHumanTry = 0;
+            return this.buyThiLuyenThiepIfNeeded();
+        }
+
+        if (TileMap.mapID != 22) {
+            this.goMap(22, -2, -1, -1);
+            return true;
+        }
+
         long now = System.currentTimeMillis();
         if (now - this.lastCloneAction <= ACTION_DELAY) {
             return true;
         }
 
         this.lastCloneAction = now;
-        this.useTajima(4);
-        Auto.sleep(1000L);
+        ++this.switchToHumanTry;
+        this.useTajimaSwitch(4, true);
+        if (this.waitPhanThanState(true, 3500L)) {
+            this.switchToHumanTry = 0;
+            return this.buyThiLuyenThiepIfNeeded();
+        }
 
-        Char me = Char.getMyChar();
-        if (me != null && me.isHuman) {
-            if (Char.k(ITEM_THI_LUYEN_THIEP) <= 0 && now - this.lastBuyThiLuyenThiep > BUY_RETRY_DELAY) {
-                this.lastBuyThiLuyenThiep = now;
-                this.popupSlow("PT: mua thi luyen thiep");
-                AutoBuyShop.buyNow(ITEM_THI_LUYEN_THIEP, SHOP_THI_LUYEN_THIEP, 1);
-            }
-            return true;
+        if (this.switchToHumanTry >= 3) {
+            this.switchToHumanTry = 0;
+            this.lastCloneAction = 0L;
+            this.popupSlow("PT: doi chu than lai");
         }
 
         return true;
     }
 
-    private void useTajima(int option) {
+    private boolean buyThiLuyenThiepIfNeeded() {
+        long now = System.currentTimeMillis();
+        if (Char.k(ITEM_THI_LUYEN_THIEP) <= 0 && now - this.lastBuyThiLuyenThiep > BUY_RETRY_DELAY) {
+            this.lastBuyThiLuyenThiep = now;
+            this.popupSlow("PT: mua thi luyen thiep");
+            AutoBuyShop.buyNow(ITEM_THI_LUYEN_THIEP, SHOP_THI_LUYEN_THIEP, 1);
+        }
+
+        return true;
+    }
+
+    private boolean waitPhanThanState(boolean human, long timeout) {
+        long end = System.currentTimeMillis() + timeout;
+        while (System.currentTimeMillis() < end) {
+            Char me = Char.getMyChar();
+            if (me != null && me.isHuman == human) {
+                return true;
+            }
+
+            Auto.sleep(250L);
+        }
+
+        Char me = Char.getMyChar();
+        return me != null && me.isHuman == human;
+    }
+
+    private void useTajimaSwitch(int option, boolean human) {
         try {
-            if (GameScr.findNpc(NPC_TAJIMA) != null) {
-                Npc npc = GameScr.findNpc(NPC_TAJIMA);
-                Char.charMove(npc.cx, npc.cy);
-                Char.getMyChar().npcFocus = npc;
-                Service.getInstance().openMenu(NPC_TAJIMA);
-                Auto.sleep(250L);
-            } else if (TileMap.mapID != 22) {
+            if (TileMap.mapID != 22) {
                 this.goMap(22, -2, -1, -1);
                 return;
             }
 
+            Npc npc = GameScr.findNpc(NPC_TAJIMA);
+            if (npc != null) {
+                Char.charMove(npc.cx, npc.cy);
+                Char.getMyChar().npcFocus = npc;
+                Service.getInstance().openMenu(NPC_TAJIMA);
+                Auto.sleep(800L);
+            }
+
             Service.getInstance().menu(NPC_TAJIMA, option, 0);
-            Auto.sleep(700L);
+            Auto.sleep(1200L);
+            Char me = Char.getMyChar();
+            if (me != null && me.isHuman != human) {
+                Service.getInstance().menu(NPC_TAJIMA, option, 0);
+                Auto.sleep(1000L);
+            }
         } catch (Exception e) {
         }
     }
@@ -529,7 +747,7 @@ public final class AutoUpLevel extends Auto {
     }
 
     private static boolean isOpenedCloneSkill(Skill skill) {
-        return isCloneSkill(skill) && skill.point > 0;
+        return isCloneSkill(skill) && (skill.template.maxPoint == 0 || skill.point > 0);
     }
 
     private static boolean isCloneSkill(Skill skill) {
@@ -537,8 +755,7 @@ public final class AutoUpLevel extends Auto {
             return false;
         }
 
-        int id = skill.template.id;
-        return id >= 67 && id <= 72 || id == 97;
+        return Auto.isPhanThanSkillId(skill.template.id);
     }
 
     private int getEffectSecondsLeft(Char me, int effectId) {

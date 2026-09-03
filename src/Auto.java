@@ -34,6 +34,7 @@ public abstract class Auto {
     private static long lastLuuToaDoTruong = 0L;
     private String stuckStatus = null;
     private long stuckStatusTime = 0L;
+    private long lastTeleMobAttackAt = 0L;
 
     public Auto() {
     }
@@ -451,6 +452,32 @@ public abstract class Auto {
 
     }
 
+    protected final boolean teleMobForAttack(Mob mob, Skill skill) {
+        if (!Code.teleTarget || mob == null || skill == null) {
+            return false;
+        }
+
+        if (skill.template.type != 1 && skill.template.type != 3) {
+            return false;
+        }
+
+        Char me = Char.getMyChar();
+        int x = getMobAttackX(mob);
+        int y = getMobAttackY(mob);
+        if (Res.e(me.cx - x) <= skill.dx + 30 && Res.e(me.cy - y) <= skill.dy + 30) {
+            return true;
+        }
+
+        long now = System.currentTimeMillis();
+        if (now - this.lastTeleMobAttackAt < 450L) {
+            return true;
+        }
+
+        this.lastTeleMobAttackAt = now;
+        this.c(mob);
+        return me.mobFocus == mob;
+    }
+
     protected static void d(Char var0) {
         if (var0 != null) {
             Char var1 = Char.getMyChar();
@@ -802,7 +829,7 @@ public abstract class Auto {
                     }
                     if ((skill = (Skill) p.vSkillFight.elementAt(var17)) != null && System.currentTimeMillis() - skill.lastTimeUseThisSkill >= (long) skill.coolDown - 300L) {
                         if (skill.template.type == 2) {
-                            if ((p.d == null && Char.dk || skill.template.id < 67 || skill.template.id > 72) && (Char.dl || skill.template.id != 31) && (skill.template.id != 15 || !Char.dm || p.cHP < p.cMaxHP * Char.aHpValue / 100 && p.isHuman) && (skill.template.id != 6 || p.isHuman)) {
+                            if ((p.d == null && Char.dk || !isPhanThanSkillId(skill.template.id)) && (Char.dl || skill.template.id != 31) && (skill.template.id != 15 || !Char.dm || p.cHP < p.cMaxHP * Char.aHpValue / 100 && p.isHuman) && (skill.template.id != 6 || p.isHuman)) {
                                 var21 = (int) (System.currentTimeMillis() / 1000L);
                                 int var22 = 0;
 
@@ -977,8 +1004,16 @@ public abstract class Auto {
                     int focusX = getMobAttackX(mobFocus);
                     int focusY = getMobAttackY(mobFocus);
                     if ((currentSkill.template.type == 1 || currentSkill.template.type == 3) && (Res.e(p.cx - focusX) > currentSkill.dx + 30 || Res.e(p.cy - focusY) > currentSkill.dy + 30)) {
-                        p.mobFocus = null;
-                        return;
+                        if (!this.teleMobForAttack(mobFocus, currentSkill)) {
+                            p.mobFocus = null;
+                            return;
+                        }
+
+                        focusX = getMobAttackX(mobFocus);
+                        focusY = getMobAttackY(mobFocus);
+                        if (Res.e(p.cx - focusX) > currentSkill.dx + 30 || Res.e(p.cy - focusY) > currentSkill.dy + 30) {
+                            return;
+                        }
                     }
 
                     var17 = currentSkill.dx;
@@ -1096,7 +1131,7 @@ public abstract class Auto {
 
             for (int var2 = 0; var2 < var1.vSkillFight.size(); ++var2) {
                 Skill var3;
-                if ((var3 = (Skill) var1.vSkillFight.elementAt(var2)) != null && !var3.isCooldown() && var3.template.id >= 67 && var3.template.id <= 72 || var3.template.id == 97) {
+                if ((var3 = (Skill) var1.vSkillFight.elementAt(var2)) != null && !var3.isCooldown() && isPhanThanSkillId(var3.template.id)) {
                     Service.getInstance().selectSkill(var3.template.id);
                     Service.getInstance().r();
                     LockGame.ab();
@@ -1124,6 +1159,10 @@ public abstract class Auto {
         }
 
         return false;
+    }
+
+    protected static boolean isPhanThanSkillId(int id) {
+        return id >= 67 && id <= 72 || id == 97;
     }
 
     public static boolean goTruongIfNeeded() {

@@ -90,7 +90,7 @@ public final class AutoBuff extends Auto {
              if (this.a && this.k() && var9 != null && var1.nClass.classId == 6) {
                 for(int var10 = 0; var10 < var1.vSkillFight.size(); ++var10) {
                    Skill var15;
-                   if ((var15 = (Skill)var1.vSkillFight.elementAt(var10)) != null && !var15.isCooldown() && var15.template.type == 2 && (var15.template.id < 67 || var15.template.id > 72) && (var15.template.id != 47 || var9.cHP < var9.cMaxHP * Char.aHpValue / 100)) {
+                   if ((var15 = (Skill)var1.vSkillFight.elementAt(var10)) != null && !var15.isCooldown() && var15.template.type == 2 && !Auto.isPhanThanSkillId(var15.template.id) && (var15.template.id != 47 || var9.cHP < var9.cMaxHP * Char.aHpValue / 100)) {
                        try {
                            System.currentTimeMillis();
                            

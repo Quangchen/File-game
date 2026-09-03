@@ -13,6 +13,15 @@ public final class AutoDapDo implements Runnable {
     private static boolean hideLuckyCardUi = false;
     private static int luckyCardResultCount = 0;
     private static Thread thread;
+    private static boolean tempConfig = false;
+    private static int oldMode = FormAutoDapDo.MODE_BAG_INDEX0;
+    private static int oldModeMask = FormAutoDapDo.MASK_BAG_INDEX0;
+    private static int oldTargetUpgrade = 16;
+    private static boolean oldUseXuWhenLackYen = false;
+    private static boolean oldReEquipWhenDone = true;
+    private static boolean oldAutoFlip = true;
+    private static boolean oldUseProtectUnder14 = true;
+    private static boolean oldAutoBuyProtect475 = true;
     private static int activeItemId = -1;
     private static int activeTemplateId = -1;
     private static int activeType = -1;
@@ -35,6 +44,45 @@ public final class AutoDapDo implements Runnable {
         thread = new Thread(new AutoDapDo());
         thread.start();
         GameScr.chatPopup(getAutoText());
+    }
+
+    public static void startForAutoUp(int modeMask, int targetUpgrade, boolean useXuWhenLackYen) {
+        startForAutoUp(modeMask, targetUpgrade, useXuWhenLackYen, true);
+    }
+
+    public static void startForAutoUp(int modeMask, int targetUpgrade, boolean useXuWhenLackYen, boolean useProtect) {
+        if (running) {
+            return;
+        }
+        if (modeMask == 0) {
+            return;
+        }
+        if (targetUpgrade < 1) {
+            targetUpgrade = 1;
+        }
+        if (targetUpgrade > 16) {
+            targetUpgrade = 16;
+        }
+
+        oldMode = FormAutoDapDo.Mode;
+        oldModeMask = FormAutoDapDo.ModeMask;
+        oldTargetUpgrade = FormAutoDapDo.TargetUpgrade;
+        oldUseXuWhenLackYen = FormAutoDapDo.UseXuWhenLackYen;
+        oldReEquipWhenDone = FormAutoDapDo.ReEquipWhenDone;
+        oldAutoFlip = FormAutoDapDo.AutoFlip;
+        oldUseProtectUnder14 = FormAutoDapDo.UseProtectUnder14;
+        oldAutoBuyProtect475 = FormAutoDapDo.AutoBuyProtect475;
+        tempConfig = true;
+
+        FormAutoDapDo.ModeMask = modeMask;
+        FormAutoDapDo.Mode = getPrimaryModeFromMask(modeMask);
+        FormAutoDapDo.TargetUpgrade = targetUpgrade;
+        FormAutoDapDo.UseXuWhenLackYen = useXuWhenLackYen;
+        FormAutoDapDo.ReEquipWhenDone = true;
+        FormAutoDapDo.AutoFlip = false;
+        FormAutoDapDo.UseProtectUnder14 = useProtect;
+        FormAutoDapDo.AutoBuyProtect475 = useProtect;
+        start();
     }
 
     public static void stop() {
@@ -154,7 +202,36 @@ public final class AutoDapDo implements Runnable {
             restoreGameMenu();
             clearCurrentItemText();
             restoreAutoStatus();
+            restoreTempConfig();
         }
+    }
+
+    private static int getPrimaryModeFromMask(int mask) {
+        if ((mask & FormAutoDapDo.MASK_WEAPON) != 0) {
+            return FormAutoDapDo.MODE_WEAPON;
+        }
+        if ((mask & FormAutoDapDo.MASK_ADORN) != 0) {
+            return FormAutoDapDo.MODE_ADORN;
+        }
+        if ((mask & FormAutoDapDo.MASK_CLOTHE) != 0) {
+            return FormAutoDapDo.MODE_CLOTHE;
+        }
+        return FormAutoDapDo.MODE_BAG_INDEX0;
+    }
+
+    private static void restoreTempConfig() {
+        if (!tempConfig) {
+            return;
+        }
+        FormAutoDapDo.Mode = oldMode;
+        FormAutoDapDo.ModeMask = oldModeMask;
+        FormAutoDapDo.TargetUpgrade = oldTargetUpgrade;
+        FormAutoDapDo.UseXuWhenLackYen = oldUseXuWhenLackYen;
+        FormAutoDapDo.ReEquipWhenDone = oldReEquipWhenDone;
+        FormAutoDapDo.AutoFlip = oldAutoFlip;
+        FormAutoDapDo.UseProtectUnder14 = oldUseProtectUnder14;
+        FormAutoDapDo.AutoBuyProtect475 = oldAutoBuyProtect475;
+        tempConfig = false;
     }
 
     private static boolean detachBodyItem(Char me, Item item) {

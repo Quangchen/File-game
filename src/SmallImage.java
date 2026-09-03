@@ -188,7 +188,6 @@ public final class SmallImage {
                 else{
                     graphic.drawRegion(myImg.img, 0, 0, myImg.img.getWidth(), myImg.img.getHeight(), transform, x, y, anchor);
                 }
-                graphic.drawRegion(myImg.img, 0, 0, myImg.img.getWidth(), myImg.img.getHeight(), transform, x, y, anchor);
             }
 
             myImg.timeUse = System.currentTimeMillis();

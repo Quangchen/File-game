@@ -28,11 +28,15 @@ public final class AutoLDGT extends Auto {
     public static boolean clanFinish = false;
     public static String clanRoundId = "";
     public static String clanFinishedRoundId = "";
+    private static boolean clanInviteReceived = false;
+    private static long clanInviteAt = 0L;
     private static int lastScheduleDayKey = -1;
     private static long lastScheduleCheckAt = 0L;
 
     private long lastActionAt;
     private long lastInfoAt;
+    private long enterStartAt;
+    private long lastAcceptInviteAt;
     private long enteredWaitMapAt;
     private long waitLastMapAt;
     private long waitFinishAt;
@@ -45,6 +49,8 @@ public final class AutoLDGT extends Auto {
     private int waitingNextMap;
     private long waitingOpenedAt;
     private long lastNextTryAt;
+    private int waitNextTryCount;
+    private long lastMobTeleAt;
 
     private boolean waitingRealFinish;
     private long waitingRealFinishAt;
@@ -63,6 +69,8 @@ public final class AutoLDGT extends Auto {
         super.a();
         this.lastActionAt = 0L;
         this.lastInfoAt = 0L;
+        this.enterStartAt = 0L;
+        this.lastAcceptInviteAt = 0L;
         this.enteredWaitMapAt = 0L;
         this.waitLastMapAt = 0L;
         this.waitFinishAt = 0L;
@@ -74,6 +82,8 @@ public final class AutoLDGT extends Auto {
         this.waitingNextMap = -1;
         this.waitingOpenedAt = 0L;
         this.lastNextTryAt = 0L;
+        this.waitNextTryCount = 0;
+        this.lastMobTeleAt = 0L;
         this.waitingRealFinish = false;
         this.waitingRealFinishAt = 0L;
         this.tryingUseClanCard = false;
@@ -96,6 +106,8 @@ public final class AutoLDGT extends Auto {
         clanFinish = false;
         clanRoundId = "";
         clanFinishedRoundId = "";
+        clanInviteReceived = false;
+        clanInviteAt = 0L;
     }
 
     public static void onClanMessage(String from, String text) {
@@ -144,6 +156,10 @@ public final class AutoLDGT extends Auto {
                 return;
             }
 
+            if (clanRoundId.equals("") && !roundId.equals("") && isClanSignal(cmd)) {
+                clanRoundId = roundId;
+            }
+
             if (clanRoundId.equals("") || !clanRoundId.equals(roundId)) {
                 return;
             }
@@ -164,14 +180,73 @@ public final class AutoLDGT extends Auto {
         }
     }
 
+    private static boolean isClanSignal(String cmd) {
+        return cmd.equals("LDGT_OPEN_80")
+                || cmd.equals("LDGT_KEY_87")
+                || cmd.equals("LDGT_KEY_88")
+                || cmd.equals("LDGT_KEY_89")
+                || cmd.equals("LDGT_FINISH");
+    }
+
+    private static String normalizeInfoText(String text) {
+        if (text == null) {
+            return "";
+        }
+
+        String s = text.toLowerCase();
+        StringBuffer out = new StringBuffer(s.length());
+        for (int i = 0; i < s.length(); i++) {
+            char ch = s.charAt(i);
+            if ("\u00e0\u00e1\u1ea1\u1ea3\u00e3\u00e2\u1ea7\u1ea5\u1ead\u1ea9\u1eab\u0103\u1eb1\u1eaf\u1eb7\u1eb3\u1eb5".indexOf(ch) >= 0) {
+                out.append('a');
+            } else if ("\u00e8\u00e9\u1eb9\u1ebb\u1ebd\u00ea\u1ec1\u1ebf\u1ec7\u1ec3\u1ec5".indexOf(ch) >= 0) {
+                out.append('e');
+            } else if ("\u00ec\u00ed\u1ecb\u1ec9\u0129".indexOf(ch) >= 0) {
+                out.append('i');
+            } else if ("\u00f2\u00f3\u1ecd\u1ecf\u00f5\u00f4\u1ed3\u1ed1\u1ed9\u1ed5\u1ed7\u01a1\u1edd\u1edb\u1ee3\u1edf\u1ee1".indexOf(ch) >= 0) {
+                out.append('o');
+            } else if ("\u00f9\u00fa\u1ee5\u1ee7\u0169\u01b0\u1eeb\u1ee9\u1ef1\u1eed\u1eef".indexOf(ch) >= 0) {
+                out.append('u');
+            } else if ("\u1ef3\u00fd\u1ef5\u1ef7\u1ef9".indexOf(ch) >= 0) {
+                out.append('y');
+            } else if (ch == '\u0111') {
+                out.append('d');
+            } else if (ch >= 'a' && ch <= 'z' || ch >= '0' && ch <= '9') {
+                out.append(ch);
+            } else {
+                out.append(' ');
+            }
+        }
+
+        return out.toString();
+    }
+
     public static void onInfoMessage(String text) {
         try {
             if (text == null) {
                 return;
             }
             String s = text.toLowerCase();
+            String plain = normalizeInfoText(s);
+            if (s.indexOf("mời bạn vào lãnh địa gia tộc") >= 0
+                    || s.indexOf("moi ban vao lanh dia gia toc") >= 0
+                    || plain.indexOf("moi ban vao lanh dia gia toc") >= 0) {
+                clanInviteReceived = true;
+                clanInviteAt = System.currentTimeMillis();
+
+                if (!FormLDGT.isKhongDi()
+                        && !FormLDGT.isTocTruong()
+                        && (FormLDGT.isCua1() || FormLDGT.isCua2()
+                        || FormLDGT.isCua3() || FormLDGT.isClone())
+                        && !isAutoLDGTRunning()) {
+                    Code.setAuto(new AutoLDGT());
+                    Code.instance.a();
+                }
+            }
+
             if (s.indexOf("hành trình lãnh địa gia tộc đã kết thúc") >= 0
-                    || s.indexOf("hanh trinh lanh dia gia toc da ket thuc") >= 0) {
+                    || s.indexOf("hanh trinh lanh dia gia toc da ket thuc") >= 0
+                    || plain.indexOf("hanh trinh lanh dia gia toc da ket thuc") >= 0) {
                 markClanFinished();
             }
         } catch (Exception e) {
@@ -264,6 +339,7 @@ public final class AutoLDGT extends Auto {
             }
 
             Code.setAuto(new AutoLDGT());
+            Code.instance.a();
             clanCall = false;
         } catch (Exception e) {
         }
@@ -363,23 +439,38 @@ public final class AutoLDGT extends Auto {
     }
 
     private void handleGoToTerritory() {
-        if (this.tryEnterCount >= 3) {
-            this.info("LDGT: Không vào được map 80 sau 3 lần, dừng auto");
+        long now = System.currentTimeMillis();
+        if (this.enterStartAt == 0L) {
+            this.enterStartAt = now;
+        }
+
+        long maxWait = FormLDGT.isTocTruong() ? 60000L : 120000L;
+        if (now - this.enterStartAt > maxWait) {
+            this.info("LDGT: Không vào được map 80, dừng auto");
             this.finishAndReturn();
             return;
         }
 
-        if (!this.canDoAction(1200L)) {
+        if (!FormLDGT.isTocTruong()
+                && clanInviteReceived
+                && now - clanInviteAt < 120000L
+                && now - this.lastAcceptInviteAt >= 2000L) {
+            this.lastAcceptInviteAt = now;
+            this.info("LDGT: Nhận lời mời vào lãnh địa");
+            GameScr.PickNpc(NPC_KANATA, 1, 0);
+        }
+
+        if (!this.canDoAction(2500L)) {
             return;
         }
 
         this.tryEnterCount++;
-        this.lastActionAt = System.currentTimeMillis();
+        this.lastActionAt = now;
 
         if (FormLDGT.isTocTruong()) {
             this.info("LDGT: Tộc trưởng vào map chờ");
         } else {
-            this.info("LDGT: Thành viên vào map chờ");
+            this.info("LDGT: Thành viên vào map chờ lần " + this.tryEnterCount);
         }
 
         this.openTerritoryByNpc0();
@@ -389,6 +480,10 @@ public final class AutoLDGT extends Auto {
         if (this.enteredWaitMapAt == 0L) {
             this.enteredWaitMapAt = System.currentTimeMillis();
         }
+        this.enterStartAt = 0L;
+        this.lastAcceptInviteAt = 0L;
+        clanInviteReceived = false;
+        clanInviteAt = 0L;
 
         if (FormLDGT.isTocTruong()) {
             this.handleLeaderWaitMap();
@@ -572,10 +667,20 @@ public final class AutoLDGT extends Auto {
             return;
         }
 
-        if (this.lastNextTryAt == 0L || System.currentTimeMillis() - this.lastNextTryAt > 10000L) {
-            this.lastNextTryAt = System.currentTimeMillis();
+        if (this.lastNextTryAt == 0L || System.currentTimeMillis() - this.lastNextTryAt > 2000L) {
+            long now = System.currentTimeMillis();
+            this.lastNextTryAt = now;
             this.info("LDGT: Thử qua cửa");
             this.nextThroughCurrentGate();
+            ++this.waitNextTryCount;
+
+            if (this.waitNextTryCount >= 3 && this.waitingNextMap != MAP_WAIT && !this.isWaitingFinalKeys() && this.canDoAction(1500L)) {
+                this.lastActionAt = now;
+                this.waitNextTryCount = 0;
+                this.waitingOpenedAt = now;
+                this.info("LDGT: M\u1edf l\u1ea1i c\u1eeda");
+                this.openNpc27();
+            }
         }
     }
 
@@ -585,6 +690,7 @@ public final class AutoLDGT extends Auto {
             this.waitingNextMap = mapId;
             this.waitingOpenedAt = System.currentTimeMillis();
             this.lastNextTryAt = 0L;
+            this.waitNextTryCount = 0;
         }
     }
 
@@ -593,6 +699,7 @@ public final class AutoLDGT extends Auto {
         this.waitingNextMap = -1;
         this.waitingOpenedAt = 0L;
         this.lastNextTryAt = 0L;
+        this.waitNextTryCount = 0;
     }
 
     private void nextThroughCurrentGate() {
@@ -653,6 +760,10 @@ public final class AutoLDGT extends Auto {
                 this.moveThroughGate(938, 962, 252, 276);
                 return;
         }
+    }
+
+    private boolean isWaitingFinalKeys() {
+        return TileMap.mapID >= 87 && TileMap.mapID <= 89 && (!clanKey87 || !clanKey88 || !clanKey89);
     }
 
     private boolean moveThroughGate(int minX, int maxX, int minY, int maxY) {
@@ -739,8 +850,45 @@ public final class AutoLDGT extends Auto {
 
     private void attackAllMobs() {
         try {
+            Mob mob = this.findNearestLivingMob();
+            if (mob != null) {
+                Char me = Char.getMyChar();
+                me.charFocus = null;
+                me.mobFocus = mob;
+                if (System.currentTimeMillis() - this.lastMobTeleAt >= 450L) {
+                    this.lastMobTeleAt = System.currentTimeMillis();
+                    this.c(mob);
+                    if (me.mobFocus == null) {
+                        me.mobFocus = mob;
+                    }
+                    Service.getInstance().b(mob.m);
+                }
+            }
             this.attack(-1, this.a(true, true, true, true));
         } catch (Exception e) {
+        }
+    }
+
+    private Mob findNearestLivingMob() {
+        try {
+            Char me = Char.getMyChar();
+            Mob best = null;
+            int bestDistance = 2147483647;
+            for (int i = 0; i < GameScr.vMobAttack.size(); i++) {
+                Mob mob = (Mob) GameScr.vMobAttack.elementAt(i);
+                if (mob == null || mob.hp <= 0 || mob.h == 0 || mob.h == 1) {
+                    continue;
+                }
+
+                int distance = me == null ? 0 : Res.distance(me.cx, me.cy, getMobAttackX(mob), getMobAttackY(mob));
+                if (best == null || distance < bestDistance) {
+                    best = mob;
+                    bestDistance = distance;
+                }
+            }
+            return best;
+        } catch (Exception e) {
+            return null;
         }
     }
 

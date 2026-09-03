@@ -3,6 +3,8 @@ public final class AutoTinhLuyen implements Runnable {
     private static final int[] ADORN_TYPES = new int[]{3, 5, 7, 9};
     private static final int[] CLOTHE_TYPES = new int[]{0, 2, 4, 6, 8};
     private static final int[] ALL_BODY_TYPES = new int[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+    private static final int MOUNT_EQUIP_TYPE_START = 29;
+    private static final int MOUNT_EQUIP_TYPE_END = 32;
     private static final int[] YEN_NEED = new int[]{150000, 247500, 408375, 673819, 1111801, 2056832, 4010822, 7420021, 12243035};
     private static final byte[] STONE_NEED = new byte[]{3, 5, 9, 4, 7, 10, 5, 7, 9};
     private static final int ITEM_CHUYEN_TINH_THACH = 454;
@@ -36,19 +38,21 @@ public final class AutoTinhLuyen implements Runnable {
     private static int[] pickReserveHave = new int[]{-1, -1, -1, -1};
     private static long pickReserveAt = 0L;
     private static long lastBackgroundCombineAt = 0L;
+    private static long lastAutoRunCheck = 0L;
 
     public static void start() {
         FormAutoTinhLuyen.load();
-        startInternal();
+        FormAutoTinhLuyen.setAutoRun(true);
+        startInternal(true);
     }
 
     public static void startConvertOnly() {
         FormAutoTinhLuyen.load();
         FormAutoTinhLuyen.ActionMode = FormAutoTinhLuyen.ACTION_CONVERT_ONLY;
-        startInternal();
+        startInternal(true);
     }
 
-    private static void startInternal() {
+    private static void startInternal(boolean showPopup) {
         if (running) {
             GameScr.chatPopup("Auto tinh luyện đang chạy");
             return;
@@ -61,16 +65,42 @@ public final class AutoTinhLuyen implements Runnable {
         clearActive();
         thread = new Thread(new AutoTinhLuyen());
         thread.start();
-        GameScr.chatPopup(getAutoText());
+        if (showPopup) {
+            GameScr.chatPopup(getAutoText());
+        }
     }
 
     public static void stop() {
+        FormAutoTinhLuyen.setAutoRun(false);
         if (!running) {
             return;
         }
 
         running = false;
         GameScr.chatPopup("Dừng auto tinh luyện");
+    }
+
+    public static void updateAutoRun() {
+        try {
+            long now = System.currentTimeMillis();
+            if (now - lastAutoRunCheck < 3000L) {
+                return;
+            }
+            lastAutoRunCheck = now;
+
+            if (running || !(GameCanvas.mScreen instanceof GameScr) || !FormAutoTinhLuyen.isAutoRun()) {
+                return;
+            }
+
+            Char me = Char.getMyChar();
+            if (me == null || me.charName == null || me.charName.length() == 0
+                    || me.arrItemBag == null || me.arrItemBody == null || !me.isHuman) {
+                return;
+            }
+
+            startInternal(false);
+        } catch (Exception e) {
+        }
     }
 
     public static void toggle() {
@@ -519,8 +549,8 @@ public final class AutoTinhLuyen implements Runnable {
         if (me == null) {
             return null;
         }
-        if (type >= 29 && type <= 33) {
-            int mountIndex = type - 29;
+        if (type >= MOUNT_EQUIP_TYPE_START && type <= MOUNT_EQUIP_TYPE_END) {
+            int mountIndex = type - MOUNT_EQUIP_TYPE_START;
             return me.arrItemMounts != null && mountIndex >= 0 && mountIndex < me.arrItemMounts.length
                     ? me.arrItemMounts[mountIndex]
                     : null;
@@ -893,7 +923,7 @@ public final class AutoTinhLuyen implements Runnable {
     private static boolean isSupportedEquip(Item item) {
         return item != null && item.template != null
                 && (item.isTypeClothe() || item.isTypeAdorn() || item.isTypeWeapon()
-                || item.template.type == 12 || item.isTypeMounts());
+                || item.template.type == 12 || isMountEquip(item));
     }
 
     private static boolean isTargetType(Item item) {
@@ -943,12 +973,29 @@ public final class AutoTinhLuyen implements Runnable {
         }
         lockTargetItem(item);
         activeBodyType = item.template.type;
-        if (item.typeUI == 41 || item.isTypeMounts()) {
-            Service.getInstance().itemMonToBag(item.indexUI);
+        if (item.typeUI == 41 || isMountEquip(item)) {
+            int mountIndex = getMountEquipIndex(item);
+            if (mountIndex < 0) {
+                currentText = "TL: sai slot trang bi thu";
+                return false;
+            }
+            Service.getInstance().itemMonToBag(mountIndex);
         } else {
             Service.getInstance().itemBodyToBag(item.indexUI);
         }
         return true;
+    }
+
+    private static boolean isMountEquip(Item item) {
+        return item != null && item.template != null
+                && item.template.type >= MOUNT_EQUIP_TYPE_START && item.template.type <= MOUNT_EQUIP_TYPE_END;
+    }
+
+    private static int getMountEquipIndex(Item item) {
+        if (!isMountEquip(item)) {
+            return -1;
+        }
+        return item.template.type - MOUNT_EQUIP_TYPE_START;
     }
 
     private static void lockTargetItem(Item item) {

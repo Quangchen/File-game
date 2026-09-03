@@ -2,11 +2,17 @@
 public final class AutoUp extends Auto {
 
     private int mobId;
+    private int[] mobIds;
+    private long noTargetSince;
 
     public AutoUp() {
     }
 
     public final void init(int mapId, int zoneId) {
+        this.init(mapId, zoneId, FormAutoUp.getTargetMobIds());
+    }
+
+    public final void init(int mapId, int zoneId, int[] targetMobIds) {
         super.a();
         super.mapID = mapId;
         super.zoneID = zoneId;
@@ -15,6 +21,8 @@ public final class AutoUp extends Auto {
         super.k = -1;
         super.l = -1;
         this.mobId = -1;
+        this.mobIds = copyMobIds(targetMobIds);
+        this.noTargetSince = 0L;
     }
 
     protected final void run() {
@@ -28,12 +36,111 @@ public final class AutoUp extends Auto {
             return;
         }
 
-        this.attack(this.mobId, this.a(Char.tickDanhQuaiThuong, Char.tickDanhTinhAnh, Char.tickDanhThuLinh, false));
+        int targetMobId = this.getAttackMobId();
+        if (targetMobId == -2) {
+            this.handleNoTargetMob();
+            this.pickUpItem(-1);
+            return;
+        }
+
+        this.attack(targetMobId, this.a(Char.tickDanhQuaiThuong, Char.tickDanhTinhAnh, Char.tickDanhThuLinh, false));
         this.pickUpItem(-1);
     }
 
     public final String toString() {
-        return "Auto Up map " + super.mapID + " khu " + super.zoneID;
+        return "Auto Up map " + super.mapID + " khu " + super.zoneID + this.getMobIdsText();
+    }
+
+    private int getAttackMobId() {
+        if (this.mobIds == null || this.mobIds.length == 0) {
+            this.mobId = -1;
+            this.noTargetSince = 0L;
+            return -1;
+        }
+
+        Char me = Char.getMyChar();
+        Mob best = null;
+        int bestId = -2;
+        int bestDistance = 999999;
+        for (int i = 0; i < GameScr.vMobAttack.size(); ++i) {
+            Mob mob = (Mob) GameScr.vMobAttack.elementAt(i);
+            int matchedId = this.getMatchedMobId(mob);
+            if (matchedId >= 0 && mob.hp > 0 && mob.h != 0 && mob.h != 1 && !mob.isBoss) {
+                int distance = me == null ? 0 : Res.distance(me.cx, me.cy, Auto.getMobAttackX(mob), Auto.getMobAttackY(mob));
+                if (best == null || distance < bestDistance) {
+                    best = mob;
+                    bestId = matchedId;
+                    bestDistance = distance;
+                }
+            }
+        }
+
+        if (best != null) {
+            this.mobId = bestId;
+            this.noTargetSince = 0L;
+            return bestId;
+        }
+
+        return -2;
+    }
+
+    private int getMatchedMobId(Mob mob) {
+        if (mob == null || this.mobIds == null) {
+            return -1;
+        }
+
+        int templateId = Auto.getMobTemplateServerId(mob);
+        for (int i = 0; i < this.mobIds.length; ++i) {
+            if (mob.id == this.mobIds[i] || templateId == this.mobIds[i]) {
+                return this.mobIds[i];
+            }
+        }
+
+        return -1;
+    }
+
+    private void handleNoTargetMob() {
+        Char me = Char.getMyChar();
+        if (me != null) {
+            me.mobFocus = null;
+        }
+
+        long now = System.currentTimeMillis();
+        if (this.noTargetSince <= 0L) {
+            this.noTargetSince = now;
+            return;
+        }
+
+        if (now - this.noTargetSince >= 5000L) {
+            this.noTargetSince = now;
+            this.b(TileMap.zoneID);
+        }
+    }
+
+    private static int[] copyMobIds(int[] ids) {
+        if (ids == null || ids.length == 0) {
+            return new int[0];
+        }
+
+        int[] result = new int[ids.length];
+        System.arraycopy(ids, 0, result, 0, ids.length);
+        return result;
+    }
+
+    private String getMobIdsText() {
+        if (this.mobIds == null || this.mobIds.length == 0) {
+            return "";
+        }
+
+        StringBuffer sb = new StringBuffer(" quai ");
+        for (int i = 0; i < this.mobIds.length; ++i) {
+            if (i > 0) {
+                sb.append(',');
+            }
+            sb.append(this.mobIds[i]);
+        }
+
+        return sb.toString();
     }
 
     public static Auto getRunningAutoUp(Auto auto) {

@@ -19,10 +19,10 @@ public final class FormAutoCauCa implements CommandListener {
     public static int DelayMs = 1000;
     public static int MinEmptySlot = 1;
     public static int RodItemId = 597;
-    public static int RodShopId = 14;
+    public static int RodShopId = 8;
     public static int RodBuyCount = 10;
     public static int BaitItemId = 603;
-    public static int BaitShopId = 8;
+    public static int BaitShopId = 14;
     public static int BaitBuyCount = 50;
     public static int BaitItemId2 = 602;
     public static int BaitShopId2 = 9;
@@ -117,10 +117,10 @@ public final class FormAutoCauCa implements CommandListener {
                 DelayMs = parseInt(this.delayMs.getString(), 1000);
                 MinEmptySlot = parseInt(this.minEmptySlot.getString(), 1);
                 RodItemId = parseInt(this.rodItemId.getString(), 597);
-                RodShopId = parseInt(this.rodShopId.getString(), 14);
+                RodShopId = parseInt(this.rodShopId.getString(), 8);
                 RodBuyCount = parseInt(this.rodBuyCount.getString(), 10);
                 BaitItemId = parseInt(this.baitItemId.getString(), 603);
-                BaitShopId = parseInt(this.baitShopId.getString(), 8);
+                BaitShopId = parseInt(this.baitShopId.getString(), 14);
                 BaitBuyCount = parseInt(this.baitBuyCount.getString(), 50);
                 BaitItemId2 = parseInt(this.baitItemId2.getString(), 602);
                 BaitShopId2 = parseInt(this.baitShopId2.getString(), 9);
@@ -197,6 +197,10 @@ public final class FormAutoCauCa implements CommandListener {
                 BaitBuyCount2 = datain.readInt();
                 FishX = datain.readInt();
                 FishY = datain.readInt();
+                if (RodItemId == 597 && BaitItemId == 603 && RodShopId == 14 && BaitShopId == 8) {
+                    RodShopId = 8;
+                    BaitShopId = 14;
+                }
                 datain.close();
                 bytein.close();
             }

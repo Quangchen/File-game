@@ -29,6 +29,7 @@ public final class FormAutoUp implements CommandListener, javax.microedition.lcd
     public static boolean batAutoUp = false;
     public static int mapUp = 134;
     public static int khuUp = -1;
+    public static String mobIds = "";
 
     public static boolean dungTnp = false;
     public static boolean dungDan = false;
@@ -53,6 +54,7 @@ public final class FormAutoUp implements CommandListener, javax.microedition.lcd
 
     private TextField mapTf;
     private TextField khuTf;
+    private TextField mobIdsTf;
     private javax.microedition.lcdui.StringItem currentMapItem;
     private ChoiceGroup mapChoice;
     private ChoiceGroup caidat;
@@ -61,6 +63,7 @@ public final class FormAutoUp implements CommandListener, javax.microedition.lcd
         this.currentMapItem = new javax.microedition.lcdui.StringItem("Map hien tai", "", javax.microedition.lcdui.StringItem.BUTTON);
         this.currentMapItem.setDefaultCommand(this.getMap);
         this.currentMapItem.setItemCommandListener(this);
+        this.mobIdsTf = new TextField("ID quai danh (vd 185,180; trong = all)", mobIds == null ? "" : mobIds, 80, TextField.ANY);
         this.mapChoice = new ChoiceGroup("Chọn Map Up", 4, getMapChoiceLabels(), (Image[]) null);
         this.mapTf = new TextField("Map ID thủ công (để trống = chọn danh sách)", "", 4, 2);
         this.khuTf = new TextField("Khu Up (-1 = tất cả)", String.valueOf(khuUp), 4, TextField.ANY);
@@ -80,12 +83,14 @@ public final class FormAutoUp implements CommandListener, javax.microedition.lcd
 
         this.selectCurrentMap();
         this.mapTf.setString("");
+        this.mobIdsTf.setString(mobIds == null ? "" : mobIds);
         this.updateCurrentMapItem();
 
         this.form.append(this.currentMapItem);
         this.form.append(this.mapChoice);
         this.form.append(this.mapTf);
         this.form.append(this.khuTf);
+        this.form.append(this.mobIdsTf);
         this.form.append(this.caidat);
 
         this.form.addCommand(this.luu);
@@ -112,6 +117,7 @@ public final class FormAutoUp implements CommandListener, javax.microedition.lcd
             try {
                 mapUp = this.getMapUpValue();
                 khuUp = Integer.parseInt(this.khuTf.getString().trim());
+                mobIds = normalizeMobIds(this.mobIdsTf.getString());
 
                 batAutoUp = this.caidat.isSelected(0);
                 dungTnp = this.caidat.isSelected(1);
@@ -294,12 +300,93 @@ public final class FormAutoUp implements CommandListener, javax.microedition.lcd
             applySetting();
             applyMapTicketSetting();
 
-            GameScr.chatPopup("Auto Up: map " + mapUp + " khu " + khuUp);
-            Code.autoUp.init(mapUp, khuUp);
+            GameScr.chatPopup("Auto Up: map " + mapUp + " khu " + khuUp + getTargetMobText());
+            Code.autoUp.init(mapUp, khuUp, getTargetMobIds());
             Code.setAuto((Auto) Code.autoUp);
             Code.instance.a();
         } catch (Exception e) {
         }
+    }
+
+    public static int[] getTargetMobIds() {
+        return parseMobIds(mobIds);
+    }
+
+    public static String getTargetMobText() {
+        String value = mobIds == null ? "" : mobIds.trim();
+        return value.length() == 0 ? "" : " quai " + value;
+    }
+
+    private static String normalizeMobIds(String text) {
+        int[] ids = parseMobIds(text);
+        if (ids.length == 0) {
+            return "";
+        }
+
+        StringBuffer sb = new StringBuffer();
+        for (int i = 0; i < ids.length; ++i) {
+            if (i > 0) {
+                sb.append(',');
+            }
+            sb.append(ids[i]);
+        }
+
+        return sb.toString();
+    }
+
+    private static int[] parseMobIds(String text) {
+        if (text == null) {
+            return new int[0];
+        }
+
+        String clean = cleanMobIdText(text);
+        if (clean.length() == 0) {
+            return new int[0];
+        }
+
+        String[] parts = Code.splitString(clean, ",");
+        int[] temp = new int[parts.length];
+        int count = 0;
+        for (int i = 0; i < parts.length; ++i) {
+            try {
+                String part = parts[i].trim();
+                if (part.length() > 0) {
+                    int id = Integer.parseInt(part);
+                    if (!containsMobId(temp, count, id)) {
+                        temp[count++] = id;
+                    }
+                }
+            } catch (Exception e) {
+            }
+        }
+
+        int[] result = new int[count];
+        System.arraycopy(temp, 0, result, 0, count);
+        return result;
+    }
+
+    private static boolean containsMobId(int[] ids, int count, int id) {
+        for (int i = 0; i < count; ++i) {
+            if (ids[i] == id) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static String cleanMobIdText(String text) {
+        StringBuffer sb = new StringBuffer();
+        for (int i = 0; i < text.length(); ++i) {
+            char c = text.charAt(i);
+            if (c >= '0' && c <= '9' || c == '-') {
+                sb.append(c);
+            } else if (c == ',' || c == ';' || c == '|' || c == ' ') {
+                sb.append(',');
+            }
+        }
+
+        return sb.toString();
     }
 
     public static void updateAutoStartAfterLogin() {
@@ -388,6 +475,7 @@ public final class FormAutoUp implements CommandListener, javax.microedition.lcd
             dataout.writeBoolean(hienYenUp);
             dataout.writeBoolean(false);
             dataout.writeBoolean(restartTTGTAtMaintenance);
+            dataout.writeUTF(mobIds == null ? "" : mobIds);
 
             dataout.flush();
             dataout.close();
@@ -452,6 +540,9 @@ public final class FormAutoUp implements CommandListener, javax.microedition.lcd
                 }
                 if (bytein.available() > 0) {
                     restartTTGTAtMaintenance = datain.readBoolean();
+                }
+                if (bytein.available() > 0) {
+                    mobIds = datain.readUTF();
                 }
                 animgmap = false;
                 sieeuup = false;

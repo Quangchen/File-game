@@ -318,6 +318,9 @@ public final class Controller implements IController {
                 case -22:
                     var192 = ms.reader().readUTF();
                     msgText = ms.reader().readUTF();
+                    if (AutoHalloweenManager.onPrivateMessage(var192, msgText)) {
+                        return;
+                    }
                     if (AutoEventTrade.onPrivateMessage(var192, msgText)) {
                         return;
                     }
@@ -2427,7 +2430,7 @@ public final class Controller implements IController {
                     return;
                 case 79:
                     var3 = ms.reader().readInt();
-                    if (AutoHD9xManager.shouldAcceptPartyInvite(var4 = ms.reader().readUTF()) || (var4.equals(Code.g) || Code.c(var4)) && !Code.c.f()) {
+                    if (AutoHD9xManager.shouldAcceptPartyInvite(var4 = ms.reader().readUTF()) || AutoHalloweenManager.shouldAcceptPartyInvite(var4) || (var4.equals(Code.g) || Code.c(var4)) && !Code.c.f()) {
                         Service.getInstance().t(var3);
                         return;
                     }
@@ -2447,7 +2450,7 @@ public final class Controller implements IController {
 
                     GameScr.getInstance().s();
                     var209 = ((Party) GameScr.vParty.firstElement()).d;
-                    if (AutoHD9xManager.shouldUsePartyLeader(var209)) {
+                    if (AutoHD9xManager.shouldUsePartyLeader(var209) || AutoHalloweenManager.shouldUsePartyLeader(var209)) {
                         Code.g = var209;
                     } else if (Code.g == null) {
                         Code.g = var209;

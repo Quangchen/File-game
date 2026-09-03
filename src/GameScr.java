@@ -303,6 +303,11 @@ public final class GameScr extends mScreen implements IActionListener, IChatable
     private static int marginTopTableSkill;
     private static int gapTableSkill;
     private static String[] le;
+    private static String[] optimizeMobNameCache;
+    private static long optimizeStatusCacheAt;
+    private static String optimizeStatusLine1 = "";
+    private static String optimizeStatusLine2 = "";
+    private static String optimizeStatusLine3 = "";
     private static int[] lf;
     private static int[] lg;
     private static int[] lh;
@@ -4038,46 +4043,51 @@ public final class GameScr extends mScreen implements IActionListener, IChatable
 
         int var7;
         int[] var10000;
-        for (var7 = 0; var7 < 5; ++var7) {
-            if (lj[var7] != -1) {
-                var10000 = lj;
-                var10000[var7] += Res.e(li[var7]);
-                if (lj[var7] > 30) {
-                    lj[var7] = -1;
-                }
+        boolean optimizeVisual = FormToiUu.isHideAll();
+        if (!optimizeVisual) {
+            for (var7 = 0; var7 < 5; ++var7) {
+                if (lj[var7] != -1) {
+                    var10000 = lj;
+                    var10000[var7] += Res.e(li[var7]);
+                    if (lj[var7] > 30) {
+                        lj[var7] = -1;
+                    }
 
-                var10000 = lf;
-                var10000[var7] += lh[var7];
-                var10000 = lg;
-                var10000[var7] += li[var7];
-            }
-        }
-
-        for (var7 = 0; var7 < gi.size(); ++var7) {
-            Lanterns var8;
-            Lanterns var13 = var8 = (Lanterns) gi.elementAt(var7);
-            var13.b -= var8.c;
-            if (var8.d - var8.b > 150) {
-                var8.e = true;
-            }
-
-            if (((Lanterns) gi.elementAt(var7)).e) {
-                gi.removeElementAt(var7);
-            }
-        }
-
-        for (var7 = 0; var7 < 2; ++var7) {
-            if (ln[var7] != -1) {
-                int var10003 = ln[var7]++;
-                var10000 = ll;
-                var10000[var7] += lp[var7] << 2;
-                var10003 = lm[var7]--;
-                if (ln[var7] >= 6) {
-                    ln[var7] = -1;
-                } else {
-                    lo[var7] = (ln[var7] >> 1) % 3;
+                    var10000 = lf;
+                    var10000[var7] += lh[var7];
+                    var10000 = lg;
+                    var10000[var7] += li[var7];
                 }
             }
+
+            for (var7 = 0; var7 < gi.size(); ++var7) {
+                Lanterns var8;
+                Lanterns var13 = var8 = (Lanterns) gi.elementAt(var7);
+                var13.b -= var8.c;
+                if (var8.d - var8.b > 150) {
+                    var8.e = true;
+                }
+
+                if (((Lanterns) gi.elementAt(var7)).e) {
+                    gi.removeElementAt(var7);
+                }
+            }
+
+            for (var7 = 0; var7 < 2; ++var7) {
+                if (ln[var7] != -1) {
+                    int var10003 = ln[var7]++;
+                    var10000 = ll;
+                    var10000[var7] += lp[var7] << 2;
+                    var10003 = lm[var7]--;
+                    if (ln[var7] >= 6) {
+                        ln[var7] = -1;
+                    } else {
+                        lo[var7] = (ln[var7] >> 1) % 3;
+                    }
+                }
+            }
+        } else {
+            clearOptimizeTransientVisuals();
         }
 
         if (indexMenu != -1) {
@@ -4144,62 +4154,72 @@ public final class GameScr extends mScreen implements IActionListener, IChatable
             }
         }
 
-        for (var6 = 0; var6 < w.size(); ++var6) {
-            ((MobSoul) w.elementAt(var6)).a();
+        if (!optimizeVisual) {
+            for (var6 = 0; var6 < w.size(); ++var6) {
+                ((MobSoul) w.elementAt(var6)).a();
+            }
+        } else if (w.size() > 0) {
+            w.removeAllElements();
         }
 
         if ((TileMap.a * TileMap.y >= TileMap.wMiniMap || TileMap.b * TileMap.y >= TileMap.hMiniMap) && System.currentTimeMillis() / 100L > 20L) {
             TileMap.a();
         }
 
-        for (var6 = Effect2.vRemoveEffect2.size() - 1; var6 >= 0; --var6) {
-            Effect2.vEffect2.removeElement(Effect2.vRemoveEffect2.elementAt(var6));
-            Effect2.vRemoveEffect2.removeElementAt(var6);
-        }
+        if (!optimizeVisual) {
+            for (var6 = Effect2.vRemoveEffect2.size() - 1; var6 >= 0; --var6) {
+                Effect2.vEffect2.removeElement(Effect2.vRemoveEffect2.elementAt(var6));
+                Effect2.vRemoveEffect2.removeElementAt(var6);
+            }
 
-        for (var6 = 0; var6 < Effect2.vEffect2.size(); ++var6) {
-            ((Effect2) Effect2.vEffect2.elementAt(var6)).update();
-        }
+            for (var6 = 0; var6 < Effect2.vEffect2.size(); ++var6) {
+                ((Effect2) Effect2.vEffect2.elementAt(var6)).update();
+            }
 
-        for (var6 = 0; var6 < Effect2.vEffect2Outside.size(); ++var6) {
-            ((Effect2) Effect2.vEffect2Outside.elementAt(var6)).update();
-        }
+            for (var6 = 0; var6 < Effect2.vEffect2Outside.size(); ++var6) {
+                ((Effect2) Effect2.vEffect2Outside.elementAt(var6)).update();
+            }
 
-        for (var6 = 0; var6 < Effect2.vAnimateEffect.size(); ++var6) {
-            ((Effect2) Effect2.vAnimateEffect.elementAt(var6)).update();
-        }
+            for (var6 = 0; var6 < Effect2.vAnimateEffect.size(); ++var6) {
+                ((Effect2) Effect2.vAnimateEffect.elementAt(var6)).update();
+            }
 
-        for (var6 = 0; var6 < Mob.aa.size(); ++var6) {
-            EggMonters var5;
-            EggMonters var10;
-            if ((var5 = var10 = (EggMonters) Mob.aa.elementAt(var6)).a()) {
-                if (var5.d == 0) {
-                    ++var5.e;
-                    var5.b += var5.e;
-                    ++var5.c;
-                    if (var5.c > 3) {
-                        var5.c = 0;
-                    }
+            for (var6 = 0; var6 < Mob.aa.size(); ++var6) {
+                EggMonters var5;
+                EggMonters var10;
+                if ((var5 = var10 = (EggMonters) Mob.aa.elementAt(var6)).a()) {
+                    if (var5.d == 0) {
+                        ++var5.e;
+                        var5.b += var5.e;
+                        ++var5.c;
+                        if (var5.c > 3) {
+                            var5.c = 0;
+                        }
 
-                    if ((TileMap.a(var5.a, var5.b) & 2) == 2) {
-                        var5.d = 1;
-                        var5.e = 0;
-                    }
-                } else if (var5.d == 1) {
-                    ++var5.c;
-                    if (var5.c > 6) {
-                        var5.c = 6;
-                        EggMonters.f.h = 5;
+                        if ((TileMap.a(var5.a, var5.b) & 2) == 2) {
+                            var5.d = 1;
+                            var5.e = 0;
+                        }
+                    } else if (var5.d == 1) {
+                        ++var5.c;
+                        if (var5.c > 6) {
+                            var5.c = 6;
+                            EggMonters.f.h = 5;
+                        }
                     }
                 }
-            }
 
-            if (var10.c == 6) {
-                Mob.aa.removeElementAt(var6);
+                if (var10.c == 6) {
+                    Mob.aa.removeElementAt(var6);
+                }
             }
+        } else {
+            updateOptimizeEffectQueue();
         }
 
-        SmallImage.a();
+        if (!optimizeVisual || GameCanvas.gameTick % 100 == 0) {
+            SmallImage.a();
+        }
         if (this.de >= 0 && vCharInMap.size() > 0) {
             int var11;
             if ((var11 = Char.d(this.de)) >= 0 && var11 < vCharInMap.size()) {
@@ -4241,6 +4261,62 @@ public final class GameScr extends mScreen implements IActionListener, IChatable
         boolean var14 = GameCanvas.av;
     }
 
+    private static void clearOptimizeTransientVisuals() {
+        try {
+            if (gi.size() > 0) {
+                gi.removeAllElements();
+            }
+
+            for (int i = 0; i < lj.length; ++i) {
+                lj[i] = -1;
+            }
+
+            for (int i = 0; i < ln.length; ++i) {
+                ln[i] = -1;
+            }
+        } catch (Exception e) {
+        }
+    }
+
+    private static void updateOptimizeEffectQueue() {
+        try {
+            if (w.size() > 0) {
+                w.removeAllElements();
+            }
+
+            if (Mob.aa.size() > 0) {
+                Mob.aa.removeAllElements();
+            }
+
+            if (Effect2.vRemoveEffect2.size() > 0) {
+                Effect2.vRemoveEffect2.removeAllElements();
+            }
+
+            for (int i = Effect2.vEffect2.size() - 1; i >= 0; --i) {
+                Effect2 effect = (Effect2) Effect2.vEffect2.elementAt(i);
+                if (effect instanceof ChatPopup) {
+                    effect.update();
+                } else {
+                    Effect2.vEffect2.removeElementAt(i);
+                }
+            }
+
+            for (int i = Effect2.vEffect2Outside.size() - 1; i >= 0; --i) {
+                Effect2 effect = (Effect2) Effect2.vEffect2Outside.elementAt(i);
+                if (effect instanceof ChatPopup) {
+                    effect.update();
+                } else {
+                    Effect2.vEffect2Outside.removeElementAt(i);
+                }
+            }
+
+            if (Effect2.vAnimateEffect.size() > 0) {
+                Effect2.vAnimateEffect.removeAllElements();
+            }
+        } catch (Exception e) {
+        }
+    }
+
     private static void paintSieuUpMarker(mGraphics graphic) {
         Char me = Char.getMyChar();
         if (me == null) {
@@ -4261,28 +4337,88 @@ public final class GameScr extends mScreen implements IActionListener, IChatable
     private static void paintOptimizeNames(mGraphics graphic) {
         try {
             Char me = Char.getMyChar();
-            if (me != null && me.charName != null) {
-                mFont.tahoma_7_yellow.writeText(graphic, me.charName, me.cx, me.cy - me.bj - 16, 2, mFont.tahoma_7_grey);
+            if (me != null) {
+                paintOptimizeCharName(graphic, me, true);
             }
-            if (me != null && me.charFocus != null && me.charFocus.charName != null && me.charFocus.u()) {
-                mFont.tahoma_7_white.writeText(graphic, me.charFocus.charName, me.charFocus.cx, me.charFocus.cy - me.charFocus.bj - 16, 2, mFont.tahoma_7_grey);
+
+            for (int i = 0; i < ah.size(); ++i) {
+                Npc npc = (Npc) ah.elementAt(i);
+                if (npc != null && npc.template != null && npc.template.name != null && npc.statusMe != 15 && npc.u()) {
+                    mFont.tahoma_7_green.writeText(graphic, "[" + npc.template.npcTemplateId + "]" + npc.template.name, npc.cx, npc.cy - npc.bj - 12, 2, mFont.tahoma_7_grey);
+                }
             }
-            if (me != null && me.npcFocus != null && me.npcFocus.template != null && me.npcFocus.template.name != null) {
-                mFont.tahoma_7_green.writeText(graphic, me.npcFocus.template.name, me.npcFocus.cx, me.npcFocus.cy - 32, 2, mFont.tahoma_7_grey);
+
+            for (int i = 0; i < vCharInMap.size(); ++i) {
+                Char c = (Char) vCharInMap.elementAt(i);
+                paintOptimizeCharName(graphic, c, false);
             }
-            if (me != null && me.mobFocus != null && me.mobFocus.c() && Mob.mobTemplates[me.mobFocus.id] != null) {
-                mFont.tahoma_7_yellow.writeText(graphic, Mob.mobTemplates[me.mobFocus.id].name + "(" + me.mobFocus.id + ")", me.mobFocus.curX, me.mobFocus.curY - me.mobFocus.l - 16, 2, mFont.tahoma_7_grey);
+
+            for (int i = 0; i < vParty.size(); ++i) {
+                Party party = (Party) vParty.elementAt(i);
+                if (party != null && party.f != null && party.f != me) {
+                    paintOptimizeCharName(graphic, party.f, false);
+                }
             }
-            if (Code.showMobNameId) {
-                for (int i = 0; i < vMobAttack.size(); ++i) {
-                    Mob mob = (Mob) vMobAttack.elementAt(i);
-                    if (mob != null && mob.c() && Mob.mobTemplates[mob.id] != null) {
-                        mFont.tahoma_7_yellow.writeText(graphic, Mob.mobTemplates[mob.id].name + "(" + mob.id + ")", mob.curX, mob.curY - mob.l - 16, 2, mFont.tahoma_7_grey);
+
+            for (int i = 0; i < vMobAttack.size(); ++i) {
+                Mob mob = (Mob) vMobAttack.elementAt(i);
+                if (isOptimizeMobVisible(mob)) {
+                    int height = mob.l > 0 ? mob.l : 24;
+                    String name = getOptimizeMobName(mob);
+                    if (mob.isBoss || mob.levelBoss == 3) {
+                        mFont.tahoma_7_blue1.writeText(graphic, name, mob.curX, mob.curY - height - 16, 2, mFont.tahoma_7_grey);
+                    } else {
+                        mFont.tahoma_7_yellow.writeText(graphic, name, mob.curX, mob.curY - height - 16, 2, mFont.tahoma_7_grey);
                     }
                 }
             }
         } catch (Exception e) {
         }
+    }
+
+    private static String getOptimizeMobName(Mob mob) {
+        if (mob == null || Mob.mobTemplates == null || mob.id < 0 || mob.id >= Mob.mobTemplates.length || Mob.mobTemplates[mob.id] == null) {
+            return "";
+        }
+
+        if (optimizeMobNameCache == null || optimizeMobNameCache.length != Mob.mobTemplates.length) {
+            optimizeMobNameCache = new String[Mob.mobTemplates.length];
+        }
+
+        String name = optimizeMobNameCache[mob.id];
+        if (name == null) {
+            name = Mob.mobTemplates[mob.id].name + "(" + mob.id + ")";
+            optimizeMobNameCache[mob.id] = name;
+        }
+
+        return name;
+    }
+
+    private static void paintOptimizeCharName(mGraphics graphic, Char c, boolean isMe) {
+        if (c == null || c.charName == null || c.charName.length() == 0 || c.statusMe == 15 || !c.u()) {
+            return;
+        }
+
+        String name = c.isNhanban ? "PT " + c.charName : c.charName;
+        if (isMe) {
+            mFont.tahoma_7_yellow.writeText(graphic, name, c.cx, c.cy - c.bj - 16, 2, mFont.tahoma_7_grey);
+        } else {
+            mFont.tahoma_7_white.writeText(graphic, name, c.cx, c.cy - c.bj - 16, 2, mFont.tahoma_7_grey);
+        }
+    }
+
+    private static boolean isOptimizeMobVisible(Mob mob) {
+        return mob != null
+                && mob.hp > 0
+                && mob.h != 0
+                && mob.curX >= cmx
+                && mob.curX <= cmx + gW
+                && mob.curY >= cmy
+                && mob.curY <= cmy + gH + 30
+                && Mob.mobTemplates != null
+                && mob.id >= 0
+                && mob.id < Mob.mobTemplates.length
+                && Mob.mobTemplates[mob.id] != null;
     }
 
     private static String getSkillNameWithId(SkillTemplate skillTemplate) {
@@ -6014,6 +6150,7 @@ public final class GameScr extends mScreen implements IActionListener, IChatable
 
     private void drawTableSkill(mGraphics var1) {
         if (FormToiUu.isHideSkillTable()) {
+            paintOptimizeSkillBorders(var1);
             return;
         }
         if (GameCanvas.currentDialog == null && ChatPopup.currentMultilineChatPopup == null && !GameCanvas.menu.showMenu && !cf() && super.center != this.fa && (!GameCanvas.isTouch || Char.getMyChar().vSkill.size() >= 2) && gz) {
@@ -7716,6 +7853,9 @@ public final class GameScr extends mScreen implements IActionListener, IChatable
         if (SettingGomDo.onOffValue == 0) {
             appendSchedule(sb, "Gom do", AutoReceiver.gioNhanDo, AutoReceiver.phutNhanDo);
         }
+        if (AutoHalloween.AutoTime) {
+            appendSchedule(sb, "HT", AutoHalloween.Hour, AutoHalloween.Minute);
+        }
         return sb.toString();
     }
 
@@ -7835,14 +7975,21 @@ public final class GameScr extends mScreen implements IActionListener, IChatable
             }
 
             resetCursor(var0);
-            long var2 = 0L;
-            if (exps != null && var1.cLevel >= 0 && var1.cLevel < exps.length && exps[var1.cLevel] > 0L) {
-                long var4 = var1.cExpDown > 0L ? var1.cExpDown : var1.ah;
-                var2 = var4 * 10000L / exps[var1.cLevel];
-            }
+            long now = System.currentTimeMillis();
+            if (now - optimizeStatusCacheAt >= 500L || optimizeStatusLine1.length() == 0) {
+                long var2 = 0L;
+                if (exps != null && var1.cLevel >= 0 && var1.cLevel < exps.length && exps[var1.cLevel] > 0L) {
+                    long var4 = var1.cExpDown > 0L ? var1.cExpDown : var1.ah;
+                    var2 = var4 * 10000L / exps[var1.cLevel];
+                }
 
-            int var6 = (int) (var2 % 100L);
-            String var7 = (var1.cExpDown > 0L ? "-" : "") + var2 / 100L + "." + (var6 < 10 ? "0" + var6 : String.valueOf(var6)) + "%";
+                int var6 = (int) (var2 % 100L);
+                String var7 = (var1.cExpDown > 0L ? "-" : "") + var2 / 100L + "." + (var6 < 10 ? "0" + var6 : String.valueOf(var6)) + "%";
+                optimizeStatusLine1 = "Lv " + var1.cLevel + " HP " + var1.cHP + "/" + var1.cMaxHP;
+                optimizeStatusLine2 = "MP " + var1.cMP + "/" + var1.cMaxMP + " EXP " + var7;
+                optimizeStatusLine3 = "X:" + var1.cx + " Y:" + var1.cy;
+                optimizeStatusCacheAt = now;
+            }
             int var8 = GameCanvas.width > 240 ? 220 : GameCanvas.width - 4;
             if (var8 < 140) {
                 var8 = 140;
@@ -7850,10 +7997,10 @@ public final class GameScr extends mScreen implements IActionListener, IChatable
 
             int var9 = GameCanvas.isTouch ? 38 : 34;
             drawOptimizeBorder(var0, 1, 1, var8, var9);
-            mFont.tahoma_7_yellow.writeText(var0, "Lv " + var1.cLevel + " HP " + var1.cHP + "/" + var1.cMaxHP, 5, 4, 0, mFont.tahoma_7_red);
-            mFont.tahoma_7_white.writeText(var0, "MP " + var1.cMP + "/" + var1.cMaxMP + " EXP " + var7, 5, 16, 0, mFont.tahoma_7_grey);
+            mFont.tahoma_7_yellow.writeText(var0, optimizeStatusLine1, 5, 4, 0, mFont.tahoma_7_red);
+            mFont.tahoma_7_white.writeText(var0, optimizeStatusLine2, 5, 16, 0, mFont.tahoma_7_grey);
             if (GameCanvas.isTouch) {
-                mFont.tahoma_7_yellow.writeText(var0, "X:" + var1.cx + " Y:" + var1.cy, 5, 28, 0, mFont.tahoma_7_red);
+                mFont.tahoma_7_yellow.writeText(var0, optimizeStatusLine3, 5, 28, 0, mFont.tahoma_7_red);
             }
         } catch (Exception var10) {
         }
@@ -16459,6 +16606,9 @@ public final class GameScr extends mScreen implements IActionListener, IChatable
             case 11000950:
                 new FormNsoChenSetting().select();
                 return;
+            case 11000962:
+                showMenuNsoChenEvent();
+                return;
             case 11000913:
                 new FormAutoBoss().select();
                 return;
@@ -16477,11 +16627,17 @@ public final class GameScr extends mScreen implements IActionListener, IChatable
             case 11000958:
                 new FormAutoViThu().select();
                 return;
+            case 11000963:
+                new FormAutoHalloween().select();
+                return;
             case 11000940:
                 new FormAutoTinhLuyen().select();
                 return;
+            case 11000965:
+                new FormAutoUpFull().select();
+                return;
             case 11000916:
-                Code.teleTarget = !Code.teleTarget;
+                Code.setTeleTarget(!Code.teleTarget);
              //   chatPopup("Tele muc tieu: " + (Code.teleTarget ? "Bat" : "Tat"));
                 return;
             case 11000917:
@@ -16509,7 +16665,7 @@ public final class GameScr extends mScreen implements IActionListener, IChatable
                 showMenuNsoChenGuide();
                 return;
             case 11000923:
-                showNsoChenGuide("Hướng dẫn Boss", "menuboss: mở form auto boss LC/LTT/VDMQ\nboss hoặc bossall: săn boss ngay theo khu vực đã chọn\ntb: tìm boss\ntsx + id: đánh boss theo id");
+                showNsoChenGuide("Hướng dẫn Boss", "menuboss: mở form auto boss LC/LTT/VDMQ\nÔ Map muốn săn: để trống săn hết, nhập 163,164 để chỉ săn map đó trong vùng đã tick\nboss hoặc bossall: săn boss ngay theo khu vực đã chọn\ntb: tìm boss\ntsx + id: đánh boss theo id");
                 return;
             case 11000924:
                 showNsoChenGuide("Hướng dẫn HD9x", "menuhd9x: mở form auto hang động 9x\nhd9x: bắt đầu đi hang động 9x\nTrong form: chọn đánh boss hoặc farm rương, set acc thành viên, tick nhóm trưởng nếu là leader");
@@ -16533,7 +16689,10 @@ public final class GameScr extends mScreen implements IActionListener, IChatable
                 showNsoChenGuide("Hướng dẫn Rước Đèn", "menurd/setrd: mở form auto rước đèn\nrd/ruocden: rước ngay\nstoprd: dừng auto rước đèn\nMặc định map 26, NPC 34, menu 0, dùng hộp diêm 310\nTrong form có giờ/phút tự đi; đến giờ auto sẽ tạm dừng auto hiện tại, đi map 26 và bám sát lồng đèn");
                 return;
             case 11000959:
-                showNsoChenGuide("Huong dan Vi Thu", "setvt/menuvt: mo form auto Vi Thu\nvt/vithu: chay ngay hoac tat neu dang chay\nstopvt: dung auto Vi Thu\ntrungvt/motrungvt: bat/tat auto mo trung 993\nstoptrungvt: dung auto mo trung\nCan 1 lenh 983 va 5 day Nenshi 946, thieu se tu mua shop type 8\nTick Danh boss: vao map 169 danh boss 237\nBo tick Danh boss: vao map 169 dung cho boss chet roi nhat trung 993\nTick xoa vi thu/trung co han moi xoa do khong vinh vien");
+                showNsoChenGuide("Huong dan Vi Thu", "setvt/menuvt: mo form auto Vi Thu\nvt/vithu: chay ngay hoac tat neu dang chay\nstopvt: dung auto Vi Thu\nnhh/nguhanhhoa: bat/tat tu dung Ngu Hanh Hoa 988\nCo the bat mac dinh bang tick trong nsochen > Cai dat\ntrungvt/motrungvt: bat/tat auto mo trung 993\nstoptrungvt: dung auto mo trung\nCan 1 lenh 983 va 5 day Nenshi 946, thieu se tu mua shop type 8\nTick Danh boss: vao map 169 danh boss 237\nBo tick Danh boss: vao map 169 dung cho boss chet roi nhat trung 993\nTick xoa vi thu/trung co han moi xoa do khong vinh vien");
+                return;
+            case 11000964:
+                showNsoChenGuide("H\u01b0\u1edbng d\u1eabn H\u00f3a Trang", "setht/menuht: m\u1edf form auto l\u1ec5 h\u1ed9i h\u00f3a trang\nht/hoatrang/halloween: b\u1eadt/t\u1eaft auto ngay\nstopht/dunght: d\u1eebng auto h\u00f3a trang\nNPC Tabemono(4), gi\u1edd 19-23, c\u1ea7n nh\u00f3m t\u1eeb 2 acc\nM\u1ed7i acc c\u1ea7n Th\u01b0 M\u1eddi 1071 v\u00e0 m\u1eb7t n\u1ea1 814-818\nTr\u01b0\u1edfng nh\u00f3m nh\u1eadp danh s\u00e1ch acc ph\u1ee5; th\u00e0nh vi\u00ean nh\u1eadp t\u00ean tr\u01b0\u1edfng ho\u1eb7c \u0111\u1ec3 tr\u1ed1ng");
                 return;
             case 11000941:
                 showNsoChenGuide("Hướng dẫn Tinh Luyện", "menutl: mở form auto tinh luyện\ntl: bật/tắt auto theo cấu hình\nstoptl: dừng auto tinh luyện\ndc: chạy nhanh chế độ chỉ dịch chuyển\nDịch chuyển cần đồ +12 và 20 item 454\nTinh luyện dùng 455/456/457, có thể tự ghép thạch");
@@ -16575,7 +16734,7 @@ public final class GameScr extends mScreen implements IActionListener, IChatable
                 new FormAutoCauCa().select();
                 return;
             case 11000953:
-                showNsoChenGuide("Hướng dẫn Câu Cá", "setcc hoặc menucauca: mở form cài auto câu cá\ncc hoặc cauca: bật/tắt auto câu cá\nstopcc: dừng auto câu cá\nMặc định dùng cần 597, mồi 603/602, delay 1000ms theo sleep server\nNếu shop cần/mồi khác thực tế thì chỉnh ID shop trong form");
+                showNsoChenGuide("Hướng dẫn Câu Cá", "setcc hoặc menucauca: mở form cài auto câu cá\ncc hoặc cauca: bật/tắt auto câu cá\nstopcc: dừng auto câu cá\nMặc định dùng cần 597 shop 8, mồi 603 shop 14, delay 1000ms theo sleep server\nNếu shop cần/mồi khác thực tế thì chỉnh ID shop trong form");
                 return;
             case 11000947:
                 showNsoChenGuide("Hướng dẫn Tự Dùng Item", "Trong nsochen mở Tự Dùng Item để xem list icon như Item Nhặt\nChọn icon rồi Cài đặt: delay, shop, số lượng, tự mua, check hiệu ứng\nBody trống (-1 tắt): nhập index body, ví dụ 10 để khi body(10) trống thì tự mua và dùng item");
@@ -16591,6 +16750,9 @@ public final class GameScr extends mScreen implements IActionListener, IChatable
                 return;
             case 11000937:
                 showNsoChenGuide("Huong dan Up Level", "uplv70: auto up den level 70\nuplvpt70: auto up phan than den level 70\nDieu kien PT: chu than >90 va da mo skill phan than\nstopuplv: dung auto up level\nAuto chon quai lv nhan vat +2 den +8\nPT tu mua 545, chu than mua 564 shop 8 va chuyen PT de dung\nTu level 100 tro len se tu vao VDMQ");
+                return;
+            case 11000966:
+                showNsoChenGuide("Huong dan Auto Up Tong", "setuplv/menuuplv: mo form Auto Up Tong\nuplvfull70: up den level 70, tu hoc sach type 15, tu cong tiem nang/ky nang, tu mua do thieu va dap set theo cau hinh\nstopuplv: dung auto\nTien nang: ngoai cong cong Suc manh, noi cong cong Chakra\nKy nang: uu tien skill danh 1x,2x,3x,5x\nTrong form co set 3x/4x/5x/6x, loai do, muc dap chung, dung bao hiem, doi luong ra yen khi het yen va tu mua/dung Nam linh chi 248 x2");
                 return;
             case 11000938:
                 new FormAutoGiftCode().select();
@@ -19947,18 +20109,16 @@ public final class GameScr extends mScreen implements IActionListener, IChatable
 
     private static void showMenuNsoChen() {
         MyVector var0 = new MyVector();
-        var0.addElement(new Command("Săn Bí Kíp", 11000934));
-        var0.addElement(new Command("Cài đặt", 11000950));
+        var0.addElement(new Command("Auto Up Tong", 11000965));
         var0.addElement(new Command("Hướng dẫn", 11000922));
+        var0.addElement(new Command("Cài đặt", 11000950));
+        var0.addElement(new Command("Săn Bí Kíp", 11000934));
         var0.addElement(new Command("Tối ưu", 11000942));
-        var0.addElement(new Command("Tele mục tiêu: " + (Code.teleTarget ? "Bật" : "Tắt"), 11000916));
         var0.addElement(new Command("Săn Boss", 11000913));
         var0.addElement(new Command("Hang Động 9x", 11000914));
         var0.addElement(new Command("Luyện Ngọc", 11000915));
-        var0.addElement(new Command("Đổi Lồng Đèn", 11000954));
-        var0.addElement(new Command("Rước Đèn", 11000956));
+        var0.addElement(new Command("Sự Kiện", 11000962));
         var0.addElement(new Command("Tinh Luyện", 11000940));
-        var0.addElement(new Command("Gom Sự Kiện", 11000917));
         var0.addElement(new Command("Đập Đồ", 11000918));
         var0.addElement(new Command("Dung Hợp", 11000932));
         var0.addElement(new Command("Tự Mua Shop", 11000930));
@@ -19967,15 +20127,24 @@ public final class GameScr extends mScreen implements IActionListener, IChatable
         var0.addElement(new Command("Vi Thu", 11000958));
         var0.addElement(new Command("Giftcode", 11000938));
         var0.addElement(new Command("Auto Chat", 11000960));
-        var0.addElement(new Command("Delay Mở All: " + UseAllItem.getDelayMs() + "ms", 110273));
         if (Char.getMyChar().ctypeClan == 4) {
             var0.addElement(new Command("Tộc Trưởng", 11000919));
         }
         GameCanvas.menu.showMenu(var0);
     }
 
+    private static void showMenuNsoChenEvent() {
+        MyVector var0 = new MyVector();
+        var0.addElement(new Command("Gom Sự Kiện", 11000917));
+        var0.addElement(new Command("Đổi Lồng Đèn", 11000954));
+        var0.addElement(new Command("Rước Đèn", 11000956));
+        var0.addElement(new Command("H\u00f3a Trang", 11000963));
+        GameCanvas.menu.showMenu(var0);
+    }
+
     private static void showMenuNsoChenGuide() {
         MyVector var0 = new MyVector();
+        var0.addElement(new Command("Auto Up Tong", 11000966));
         var0.addElement(new Command("Săn Boss", 11000923));
         var0.addElement(new Command("HD9x", 11000924));
         var0.addElement(new Command("Gom Do", 11000949));
@@ -19984,6 +20153,7 @@ public final class GameScr extends mScreen implements IActionListener, IChatable
         var0.addElement(new Command("Luyện Ngọc", 11000927));
         var0.addElement(new Command("Đổi Lồng Đèn", 11000955));
         var0.addElement(new Command("Rước Đèn", 11000957));
+        var0.addElement(new Command("H\u00f3a Trang", 11000964));
         var0.addElement(new Command("Tinh Luyện", 11000941));
         var0.addElement(new Command("Dung Hợp", 11000933));
         var0.addElement(new Command("Tự Mua Shop", 11000931));

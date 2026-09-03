@@ -15,7 +15,7 @@ public final class AutoBuyShop {
     public static boolean allowGoBuy = true;
     public static boolean requireEmptySlot = true;
     public static String itemIds = "545";
-    public static String shopIds = "3";
+    public static String shopIds = "14";
     public static String buyCounts = "1";
     public static int delayMs = 5000;
 
@@ -110,10 +110,12 @@ public final class AutoBuyShop {
 
             GameScr.chatPopup("Tự mua: " + itemId + " x" + count);
             requestShop(shopId);
+            waitShopItems(shopId, 5000L);
             Item shopItem = findShopItem(shopId, itemId);
             if (shopItem == null) {
                 Auto.sleep(600L);
                 requestShop(shopId);
+                waitShopItems(shopId, 5000L);
                 shopItem = findShopItem(shopId, itemId);
             }
 
@@ -124,8 +126,9 @@ public final class AutoBuyShop {
             }
 
             Service.getInstance().buyItem1(shopItem.typeUI, shopItem.indexUI, count);
+            LockGame.g();
             setLastBuy(index);
-            Auto.sleep(1000L);
+            Auto.sleep(500L);
             if (Char.k(itemId) <= before) {
                 Service.getInstance().viewInfo(Char.getMyChar().charName);
                 Auto.sleep(700L);
@@ -158,14 +161,105 @@ public final class AutoBuyShop {
         }
     }
 
+    public static boolean prepareShopForBuy(int shopId) {
+        try {
+            ensureLoaded();
+            if (isBusy()) {
+                return false;
+            }
+            if (!goShopMapForBuy()) {
+                return false;
+            }
+            requestShop(shopId);
+            boolean loaded = waitShopItems(shopId, 5000L);
+            if (!loaded) {
+                restoreGameMenu();
+            }
+            return loaded;
+        } catch (Exception e) {
+            restoreGameMenu();
+            return false;
+        }
+    }
+
+    public static void restoreAfterBuy() {
+        restoreGameMenu();
+    }
+
+    public static Item[] getShopItems(int shopId) {
+        switch (shopId) {
+            case 2:
+                return GameScr.arrItemWeapon;
+            case 6:
+                return GameScr.arrItemStack;
+            case 7:
+                return GameScr.arrItemStackLock;
+            case 8:
+                return GameScr.arrItemGrocery;
+            case 9:
+                return GameScr.arrItemGroceryLock;
+            case 14:
+                return GameScr.arrItemStore;
+            case 15:
+                return GameScr.arrItemBook;
+            case 16:
+                return GameScr.arrItemLien;
+            case 17:
+                return GameScr.arrItemNhan;
+            case 18:
+                return GameScr.arrItemNgocBoi;
+            case 19:
+                return GameScr.arrItemPhu;
+            case 20:
+                return GameScr.arrItemNonNam;
+            case 21:
+                return GameScr.arrItemNonNu;
+            case 22:
+                return GameScr.arrItemAoNam;
+            case 23:
+                return GameScr.arrItemAoNu;
+            case 24:
+                return GameScr.arrItemGangTayNam;
+            case 25:
+                return GameScr.arrItemGangTayNu;
+            case 26:
+                return GameScr.arrItemQuanNam;
+            case 27:
+                return GameScr.arrItemQuanNu;
+            case 28:
+                return GameScr.arrItemGiayNam;
+            case 29:
+                return GameScr.arrItemGiayNu;
+            case 32:
+                return GameScr.arrItemFashion;
+            case 34:
+                return GameScr.arrItemClanShop;
+            case 35:
+                return GameScr.arrItemElites;
+        }
+        return null;
+    }
+
     private static void requestShop(int shopId) {
         try {
             GameScr.getInstance().openUI(shopId);
-            Service.getInstance().requestItem(shopId);
-            Auto.sleep(800L);
+            Auto.sleep(300L);
+            if (getShopItems(shopId) == null) {
+                Service.getInstance().requestItem(shopId);
+            }
+            Auto.sleep(700L);
         } catch (Exception e) {
         }
     }
+
+    private static boolean waitShopItems(int shopId, long timeout) {
+        long start = System.currentTimeMillis();
+        while (getShopItems(shopId) == null && System.currentTimeMillis() - start < timeout) {
+            Auto.sleep(100L);
+        }
+        return getShopItems(shopId) != null;
+    }
+
 
     private static boolean goShopMapForBuy() {
         try {

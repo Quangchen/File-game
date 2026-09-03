@@ -79,6 +79,15 @@ public final class Command {
    }
 
    public final void a(mGraphics var1) {
+      if (FormToiUu.shouldHideGameButtons()) {
+         var1.setColor(16711680);
+         var1.drawRect(this.x - 3, this.y - 3, this.w + 6, this.h + 6);
+         if (this.w > 4 && this.h > 4) {
+            var1.drawRect(this.x - 2, this.y - 2, this.w + 4, this.h + 4);
+         }
+         return;
+      }
+
       if (this.e != null) {
          var1.drawImage(this.e, this.x + mGraphics.getWidth(this.e) / 2, this.y + mGraphics.getHeight(this.e) / 2, 3);
       } else {

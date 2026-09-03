@@ -170,7 +170,7 @@ public final class AutoHD9x extends Auto {
                                   
                                   if ((var15 = (Skill)var2.vSkillFight.elementAt(var5)) != null && System.currentTimeMillis() - var15.lastTimeUseThisSkill >= (long)var15.coolDown - 300L) {
                                       if (var15.template.type == 2) {
-                                          if ((var2.d == null && Char.dk || var15.template.id < 67 || var15.template.id > 72) && (Char.dl || var15.template.id != 31) && (var15.template.id != 15 || var2.cHP < var2.cMaxHP * Char.aHpValue / 100)) {
+                                          if ((var2.d == null && Char.dk || !Auto.isPhanThanSkillId(var15.template.id)) && (Char.dl || var15.template.id != 31) && (var15.template.id != 15 || var2.cHP < var2.cMaxHP * Char.aHpValue / 100)) {
                                               int var16 = (int)(System.currentTimeMillis() / 1000L);
                                               int var17 = 0;
                                               
