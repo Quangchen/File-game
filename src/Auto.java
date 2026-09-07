@@ -642,10 +642,15 @@ public abstract class Auto {
     }
 
     protected final void goToNextMob(int var1, boolean var2) {
-        if (Code.r < 0 || Code.r >= Code.s.size()) {
+        int pointCount = Code.s.size() < Code.t.size() ? Code.s.size() : Code.t.size();
+        if (pointCount <= 0) {
+            return;
+        }
+        if (Code.r < 0 || Code.r >= pointCount) {
             Code.r = 0;
         }
 
+        int checked = 0;
         while (true) {
             int var3 = ((Integer) Code.s.elementAt(Code.r)).intValue();
             int var4 = ((Integer) Code.t.elementAt(Code.r)).intValue();
@@ -660,11 +665,17 @@ public abstract class Auto {
                 return;
             }
 
-            if (++Code.r == Code.s.size()) {
+            if (++Code.r == pointCount) {
                 Code.r = 0;
                 if (Char.tickChuyenMapHetBoss && var2) {
                     this.changeOtherZone();
+                    return;
                 }
+            }
+
+            ++checked;
+            if (checked >= pointCount) {
+                return;
             }
         }
     }

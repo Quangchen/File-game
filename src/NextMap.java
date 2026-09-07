@@ -23,7 +23,7 @@ final class NextMap implements Runnable {
           var2.printStackTrace();
        }
  
-       System.gc();
+       NinjaUtil.requestGc();
        if (Session_ME.getInstance().connected) {
           GameScr.getInstance().update();
        }

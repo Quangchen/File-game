@@ -7,7 +7,7 @@ public final class MotherCanvas extends Canvas implements Runnable {
    public static MotherCanvas instance;
    public GameGraphics tCanvas;
    private int d = 1;
-   public static boolean c;
+   public static volatile boolean c;
 
    public MotherCanvas() {
       this.setFullScreenMode(true);

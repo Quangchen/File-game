@@ -792,13 +792,13 @@ final class AutoHalloweenManager {
     private static final long PREPARE_DELAY = 8000L;
     private static final long MEMBER_ENTER_DELAY = 2500L;
 
-    private static boolean active = false;
-    private static boolean leaderRound = false;
-    private static String roundId = "";
-    private static String currentLeader = "";
-    private static long lastInviteAt = 0L;
-    private static long lastPrepareAt = 0L;
-    private static long memberEnterAt = 0L;
+    private static volatile boolean active = false;
+    private static volatile boolean leaderRound = false;
+    private static volatile String roundId = "";
+    private static volatile String currentLeader = "";
+    private static volatile long lastInviteAt = 0L;
+    private static volatile long lastPrepareAt = 0L;
+    private static volatile long memberEnterAt = 0L;
 
     private AutoHalloweenManager() {
     }

@@ -31,7 +31,7 @@ public class AutoLuyenNgoc implements Runnable {
     private static final int MODE_SELECTED = 0;
     private static final int MODE_SLOT0 = 1;
     private static final long SILENT_RESPONSE_TIMEOUT = 15000L;
-    private static boolean runningSlot0;
+    private static volatile boolean runningSlot0;
     private static int silentRequestCount;
     private static long lastSilentRequestAt;
 
@@ -254,7 +254,8 @@ public class AutoLuyenNgoc implements Runnable {
     }
 
     private static void waitDoiLongDenBusy() {
-        while ((AutoDoiLongDen.shouldPauseProducers() || AutoRuocDen.isBusy()) && GameCanvas.mScreen instanceof GameScr) {
+        while ((AutoDoiLongDen.shouldPauseProducers() || AutoRuocDen.isBusy() || AutoLuckyCard.isRunning()
+                || AutoDapDo.isLuckyCardBusy()) && GameCanvas.mScreen instanceof GameScr) {
             Auto.sleep(100L);
         }
     }

@@ -5,6 +5,16 @@ import java.util.Random;
 
 public final class NinjaUtil {
    private static Random rand = new Random();
+   private static final long GC_MIN_INTERVAL = 10000L;
+   private static long lastGcAt;
+
+   public static synchronized void requestGc() {
+      long now = System.currentTimeMillis();
+      if (now - lastGcAt >= GC_MIN_INTERVAL) {
+         lastGcAt = now;
+         System.gc();
+      }
+   }
 
    public static int a(int var0) {
       return rand.nextInt(var0);

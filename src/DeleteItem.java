@@ -13,15 +13,15 @@ final class DeleteItem implements Runnable {
     private static final long FAST_REPEAT_GUARD = 1500L;
     private static final long FAST_SORT_GUARD_DELAY = 300L;
 
-    private static boolean running = false;
-    private static int pendingOp = OP_NONE;
-    private static int pendingIndex = -1;
-    private static short pendingId = -1;
-    private static int pendingQuantity = 0;
-    private static long pendingAt = 0L;
-    private static Item pendingItem = null;
-    private static long lastRequestAt = 0L;
-    private static long resyncUntil = 0L;
+    private static volatile boolean running = false;
+    private static volatile int pendingOp = OP_NONE;
+    private static volatile int pendingIndex = -1;
+    private static volatile short pendingId = -1;
+    private static volatile int pendingQuantity = 0;
+    private static volatile long pendingAt = 0L;
+    private static volatile Item pendingItem = null;
+    private static volatile long lastRequestAt = 0L;
+    private static volatile long resyncUntil = 0L;
 
     DeleteItem(Code var1) {
     }

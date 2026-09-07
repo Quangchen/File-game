@@ -66,6 +66,10 @@ public final class GameScr extends mScreen implements IActionListener, IChatable
     private static int totalRowSetting;
     public static int indexMenu = 0;
     public static int an = -1;
+    private static final int NSO_CHEN_QUICK_W = 34;
+    private static final int NSO_CHEN_QUICK_H = 34;
+    private static int nsoChenQuickX = -1;
+    private static int nsoChenQuickY = -1;
     private static final int QUICK_STOP_AUTO_W = 22;
     private static final int QUICK_STOP_AUTO_H = 14;
     private static int quickStopAutoX = -1;
@@ -1933,6 +1937,12 @@ public final class GameScr extends mScreen implements IActionListener, IChatable
                 var5 = false;
                 mScreen.fr = -1;
                 if (checkQuickStopAutoButton()) {
+                    var5 = true;
+                }
+                if (TileMap.checkDoiLongDenStopButton()) {
+                    var5 = true;
+                }
+                if (checkNsoChenQuickMenuButton()) {
                     var5 = true;
                 }
                 if (GameCanvas.b(TileMap.posMiniMapX, TileMap.posMiniMapY, TileMap.wMiniMap, TileMap.hMiniMap) && GameCanvas.isPointerClick && GameCanvas.isPointerJustRelease) {
@@ -4028,7 +4038,7 @@ public final class GameScr extends mScreen implements IActionListener, IChatable
         }
 
         if (Char.getMyChar().statusMe == 1 && GameCanvas.gameTick % 100 == 0) {
-            System.gc();
+            NinjaUtil.requestGc();
         }
 
         for (var6 = 0; var6 < vMobAttack.size(); ++var6) {
@@ -5999,6 +6009,19 @@ public final class GameScr extends mScreen implements IActionListener, IChatable
                     }
                     paintQuickStopAutoButton(var1, var3, var2, autoText);
                 }
+                if (AutoLuckyCard.isRunning()) {
+                    String autoText = AutoLuckyCard.getAutoText();
+                    if (GameCanvas.gameTick % 10 > 4) {
+                        var2 += 12;
+                        mFont.tahoma_7_yellow.writeText(var1, autoText, var3, var2, 0, mFont.tahoma_7_red);
+                    } else {
+                        var2 += 12;
+                        mFont.tahoma_7_yellow.writeText(var1, autoText, var3, var2, 0, mFont.tahoma_7_yellow);
+                    }
+                    if (Code.auto == null && !AutoTinhLuyen.isRunning() && !AutoBiKip.isRunning()) {
+                        paintQuickStopAutoButton(var1, var3, var2, autoText);
+                    }
+                }
                 // write hp focus
                 if (Char.getMyChar().mobFocus != null) {
                     MobTemplate var14 = Char.getMyChar().mobFocus.getMobTemplate();
@@ -6085,6 +6108,7 @@ public final class GameScr extends mScreen implements IActionListener, IChatable
             }
             resetCursor(var1);
             if (!ChatTextField.a().isShow) {
+                paintNsoChenQuickMenuButton(var1);
                 var1.drawImage(je, kl + 17, km + 17, 3);
             }
 
@@ -7828,8 +7852,16 @@ public final class GameScr extends mScreen implements IActionListener, IChatable
         return gt || ifa || cg || isPaintInfoMe || ha || hb || ig || hq || hc || hd || he || hf || hg || hh || hi || hj || hk || hl || hm || hn || ho || hp || hr || hs || ht || hu || hv || cd || hw || ia || ii || cl || hy || ih || showBox || showPickItem || showDelItem || showItemThrow || showItemGather || showAutoUseItem || ci || ce || showZoneDialog || showAutoPanel || gv || id || gw || gu || cf || gx || gy || ib || ck || in || ij || ik || io || il || im;
     }
 
+    public static boolean isSilentAutoBlockedByUi() {
+        try {
+            return cf();
+        } catch (Exception e) {
+            return true;
+        }
+    }
+
     private static boolean canShowQuickStopAutoButton() {
-        return GameCanvas.isTouch && (Code.auto != null || AutoBiKip.isRunning() || AutoTinhLuyen.isRunning()) && GameCanvas.currentDialog == null
+        return GameCanvas.isTouch && (Code.auto != null || AutoBiKip.isRunning() || AutoTinhLuyen.isRunning() || AutoLuckyCard.isRunning()) && GameCanvas.currentDialog == null
                 && ChatPopup.currentMultilineChatPopup == null && !GameCanvas.menu.showMenu
                 && !ChatTextField.a().isShow && !InfoDlg.f && !cf();
     }
@@ -7887,6 +7919,82 @@ public final class GameScr extends mScreen implements IActionListener, IChatable
         return sb.toString();
     }
 
+    private static boolean canShowNsoChenQuickMenuButton() {
+        try {
+            return Code.showNsoChenMenu && GameCanvas.isTouch && GameCanvas.currentDialog == null
+                    && ChatPopup.currentMultilineChatPopup == null && !GameCanvas.menu.showMenu
+                    && !ChatTextField.a().isShow && !InfoDlg.f && !cf();
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private static void updateNsoChenQuickMenuButtonPos() {
+        if (!canShowNsoChenQuickMenuButton()) {
+            nsoChenQuickX = -1;
+            nsoChenQuickY = -1;
+            return;
+        }
+
+        int gap = GameCanvas.width >= 360 ? 3 : 2;
+        int baseX = kl;
+        int baseY = km;
+        try {
+            if (a != null && a.jz != null && a.jz.x > 0) {
+                baseX = a.jz.x;
+                baseY = a.jz.y;
+            }
+        } catch (Exception e) {
+        }
+
+        if (baseY <= 0) {
+            baseY = km;
+        }
+
+        nsoChenQuickX = baseX - NSO_CHEN_QUICK_W - gap;
+        nsoChenQuickY = baseY;
+        if (nsoChenQuickX < 2) {
+            nsoChenQuickX = kl - NSO_CHEN_QUICK_W - gap;
+        }
+        if (nsoChenQuickX < 2) {
+            nsoChenQuickX = 2;
+        }
+        if (nsoChenQuickX + NSO_CHEN_QUICK_W > GameCanvas.width - 2) {
+            nsoChenQuickX = GameCanvas.width - NSO_CHEN_QUICK_W - 2;
+        }
+        if (nsoChenQuickY < Info.a) {
+            nsoChenQuickY = Info.a;
+        }
+        if (nsoChenQuickY < 1) {
+            nsoChenQuickY = 1;
+        }
+        if (nsoChenQuickY + NSO_CHEN_QUICK_H > GameCanvas.height - 2) {
+            nsoChenQuickY = GameCanvas.height - NSO_CHEN_QUICK_H - 2;
+        }
+    }
+
+    private static void paintNsoChenQuickMenuButton(mGraphics var0) {
+        updateNsoChenQuickMenuButtonPos();
+        if (nsoChenQuickX < 0 || nsoChenQuickY < 0) {
+            return;
+        }
+
+        if (FormToiUu.shouldHideGameButtons()) {
+            drawOptimizeBorder(var0, nsoChenQuickX, nsoChenQuickY, NSO_CHEN_QUICK_W, NSO_CHEN_QUICK_H);
+            return;
+        }
+
+        if (jh != null) {
+            var0.drawImage(jh, nsoChenQuickX, nsoChenQuickY, 0);
+        } else {
+            var0.setColor(11141120);
+            var0.fillRoundRect(nsoChenQuickX, nsoChenQuickY, NSO_CHEN_QUICK_W, NSO_CHEN_QUICK_H, 10, 10);
+            var0.setColor(16764040);
+            var0.drawRoundRect(nsoChenQuickX, nsoChenQuickY, NSO_CHEN_QUICK_W, NSO_CHEN_QUICK_H, 10, 10);
+        }
+        mFont.tahoma_7b_yellow.writeText(var0, "NS", nsoChenQuickX + NSO_CHEN_QUICK_W / 2, nsoChenQuickY + 10, 2);
+    }
+
     private static void paintQuickStopAutoButton(mGraphics var0, int var1, int var2, String var3) {
         if (!canShowQuickStopAutoButton()) {
             quickStopAutoX = -1;
@@ -7917,6 +8025,10 @@ public final class GameScr extends mScreen implements IActionListener, IChatable
     private void paintOptimizeButtonBorders(mGraphics var0) {
         resetCursor(var0);
         if (!ChatTextField.a().isShow) {
+            updateNsoChenQuickMenuButtonPos();
+            if (nsoChenQuickX >= 0 && nsoChenQuickY >= 0) {
+                drawOptimizeBorder(var0, nsoChenQuickX, nsoChenQuickY, NSO_CHEN_QUICK_W, NSO_CHEN_QUICK_H);
+            }
             drawOptimizeBorder(var0, kl, km, 34, 34);
         }
 
@@ -8016,6 +8128,26 @@ public final class GameScr extends mScreen implements IActionListener, IChatable
             if (GameCanvas.isPointerClick && GameCanvas.isPointerJustRelease) {
                 Code.stopCurrentAuto();
                 GameScr.chatPopup("Đã tắt auto hiện tại");
+                GameCanvas.isPointerClick = false;
+                GameCanvas.isPointerJustRelease = false;
+                GameCanvas.l();
+            }
+            return true;
+        }
+
+        return false;
+    }
+
+    private static boolean checkNsoChenQuickMenuButton() {
+        updateNsoChenQuickMenuButtonPos();
+        if (nsoChenQuickX < 0 || nsoChenQuickY < 0) {
+            return false;
+        }
+
+        if (GameCanvas.b(nsoChenQuickX, nsoChenQuickY, NSO_CHEN_QUICK_W, NSO_CHEN_QUICK_H)) {
+            mScreen.fr = 16;
+            if (GameCanvas.isPointerClick && GameCanvas.isPointerJustRelease) {
+                showMenuNsoChen();
                 GameCanvas.isPointerClick = false;
                 GameCanvas.isPointerJustRelease = false;
                 GameCanvas.l();
@@ -10904,7 +11036,7 @@ public final class GameScr extends mScreen implements IActionListener, IChatable
                     mFont.tahoma_7_yellow.writeText(var0, mResources.fe, popupX + ew / 2, popupY + ex - 14, 2);
                 }
             } else {
-                mFont.tahoma_7_yellow.writeText(var0, mResources.kg + ": " + NinjaUtil.a(String.valueOf(Char.getMyChar().luong)), popupX + ew / 2, popupY + ex - 14, 2);
+                mFont.tahoma_7_yellow.writeText(var0, mResources.kg + ": " + NinjaUtil.a(String.valueOf(Char.getMyChar().luong)) + getBagSlotInfo(), popupX + ew / 2, popupY + ex - 14, 2);
             }
         }
 
@@ -10913,6 +11045,26 @@ public final class GameScr extends mScreen implements IActionListener, IChatable
         nw = popupY + 32;
         var0.setColor(6425);
         var0.fillRect(leftMargin - 1, nw - 1, ob * wItem + 3, 5 * wItem + 3);
+    }
+
+    private static String getBagSlotInfo() {
+        try {
+            Char var0 = Char.getMyChar();
+            if (var0 == null || var0.arrItemBag == null) {
+                return "";
+            }
+
+            int var1 = 0;
+            for (int var2 = 0; var2 < var0.arrItemBag.length; ++var2) {
+                if (var0.arrItemBag[var2] == null) {
+                    ++var1;
+                }
+            }
+
+            return " | " + var1 + "/" + var0.arrItemBag.length;
+        } catch (Exception var3) {
+            return "";
+        }
     }
 
     private void b(mGraphics var1, String[] var2) {
@@ -15594,6 +15746,18 @@ public final class GameScr extends mScreen implements IActionListener, IChatable
                 }
 
                 return;
+            case 11000967:
+                item1 = obj instanceof Item ? (Item) obj : null;
+                if (item1 != null) {
+                    int ruleIndex = AutoUseItem.addFromShop(item1);
+                    if (ruleIndex >= 0) {
+                        new FormAutoUseItem(ruleIndex).select();
+                    } else {
+                        chatPopup("List Tự Dùng đã đầy");
+                    }
+                }
+
+                return;
             case 110264:
                 if ((item1 = getCurrentItemSelectByTypeUI(3)) != null) {
                     Code.b(item1);
@@ -16524,11 +16688,11 @@ public final class GameScr extends mScreen implements IActionListener, IChatable
                 showMenuSetting();
                 return;
             case 11000800:
-                GameCanvas.ak.a("Nhập số phiếu cần lật", new Command("OK", 11000801), 1);
+                new FormAutoLuckyCard().select();
                 return;
             case 11000801:
                 AutoLuckyCard.c = Integer.parseInt(GameCanvas.ak.tfInput.getText());
-                (new Thread(new AutoLuckyCard(AutoLuckyCard.c))).start();
+                AutoLuckyCard.start(AutoLuckyCard.c);
                 GameCanvas.setMaxTextLenght();
                 return;
             case 11000802:
@@ -16536,6 +16700,10 @@ public final class GameScr extends mScreen implements IActionListener, IChatable
                 return;
             case 11000803:
                 AutoLuckyCard.a = (long) Integer.parseInt(GameCanvas.ak.tfInput.getText());
+                if (AutoLuckyCard.a < 1L) {
+                    AutoLuckyCard.a = 1L;
+                }
+                AutoLuckyCard.save();
                 GameCanvas.setMaxTextLenght();
                 return;
             case 11000804:
@@ -16679,6 +16847,9 @@ public final class GameScr extends mScreen implements IActionListener, IChatable
             case 11000926:
                 showNsoChenGuide("Hướng dẫn Đập Đồ", "menudd: mở form Auto Đập Đồ\ndd hoặc dapdo: bật/tắt auto đập đồ\nstopdd: dừng auto đập đồ\nCó thể chọn index 0, vũ khí, trang sức, trang phục và cấp cần đập");
                 return;
+            case 11000969:
+                showNsoChenGuide("Hướng dẫn Lật Hình", "menulh/setlh: mở form auto lật hình\nlh: lật theo số lượng đã cài\nlh100: lật nhanh 100 lần\nstoplh: dừng auto lật hình\nType cần giữ là type item, ví dụ 26 giữ đá, 27 giữ vật phẩm sự kiện\nTick Giữ đồ gộp để không xóa item stack/cộng dồn");
+                return;
             case 11000927:
                 showNsoChenGuide("Hướng dẫn Luyện Ngọc", "setln: mở form cài đặt luyện ngọc\naln: bật/tắt auto luyện ngọc ô 0\nTick Săn ngọc max trong setln để giữ ngọc 652-655 đạt max VK/TB/TS, không dùng làm phôi");
                 return;
@@ -16752,7 +16923,7 @@ public final class GameScr extends mScreen implements IActionListener, IChatable
                 showNsoChenGuide("Huong dan Up Level", "uplv70: auto up den level 70\nuplvpt70: auto up phan than den level 70\nDieu kien PT: chu than >90 va da mo skill phan than\nstopuplv: dung auto up level\nAuto chon quai lv nhan vat +2 den +8\nPT tu mua 545, chu than mua 564 shop 8 va chuyen PT de dung\nTu level 100 tro len se tu vao VDMQ");
                 return;
             case 11000966:
-                showNsoChenGuide("Huong dan Auto Up Tong", "setuplv/menuuplv: mo form Auto Up Tong\nuplvfull70: up den level 70, tu hoc sach type 15, tu cong tiem nang/ky nang, tu mua do thieu va dap set theo cau hinh\nstopuplv: dung auto\nTien nang: ngoai cong cong Suc manh, noi cong cong Chakra\nKy nang: uu tien skill danh 1x,2x,3x,5x\nTrong form co set 3x/4x/5x/6x, loai do, muc dap chung, dung bao hiem, doi luong ra yen khi het yen va tu mua/dung Nam linh chi 248 x2");
+                showNsoChenGuide("Huong dan UpLevelVIP", "setuplv/menuuplv: mo form UpLevelVIP\nupvip: chay theo level da cai trong form\nupvip70: chay nhanh den level 70 neu muon ghi de\nstopuplv: dung auto\nTu hoc sach type 15, tu cong tiem nang/ky nang, tu mua do thieu va dap set theo cau hinh\nTien nang: ngoai cong cong Suc manh, noi cong cong Chakra\nKy nang: uu tien skill danh 1x,2x,3x,5x\nTrong form co set 3x/4x/5x/6x, loai do, muc dap chung, dung bao hiem, doi luong ra yen, Nam linh chi 248 x2 va tu lat hinh lay da");
                 return;
             case 11000938:
                 new FormAutoGiftCode().select();
@@ -17154,6 +17325,7 @@ public final class GameScr extends mScreen implements IActionListener, IChatable
     private static void dd() {
         MyVector var0;
         (var0 = new MyVector()).addElement(new Command(mResources.by, 140191));
+        addAutoUseShopMenu(var0, getCurrentItemSelectByTypeUI(34));
         var0.addElement(new Command(mResources.bz, 140192));
         GameCanvas.menu.showMenu(var0);
     }
@@ -17849,6 +18021,7 @@ public final class GameScr extends mScreen implements IActionListener, IChatable
     private static void c(Item var0) {
         MyVector var1;
         (var1 = new MyVector()).addElement(new Command(mResources.by, 110921, var0));
+        addAutoUseShopMenu(var1, var0);
         var1.addElement(new Command(mResources.bz, 110922, var0));
         GameCanvas.menu.showMenu(var1);
     }
@@ -17870,7 +18043,7 @@ public final class GameScr extends mScreen implements IActionListener, IChatable
         super.left = this.jz;
         super.right = this.gf;
         super.center = null;
-        System.gc();
+        NinjaUtil.requestGc();
         this.resetButton();
         this.bc();
     }
@@ -18734,6 +18907,7 @@ public final class GameScr extends mScreen implements IActionListener, IChatable
     private static void gs() {
         MyVector var0;
         (var0 = new MyVector()).addElement(new Command(mResources.by, 140221));
+        addAutoUseShopMenu(var0, getCurrentItemSelectByTypeUI(35));
         var0.addElement(new Command(mResources.bz, 140222));
         GameCanvas.menu.showMenu(var0);
     }
@@ -18741,6 +18915,7 @@ public final class GameScr extends mScreen implements IActionListener, IChatable
     private static void gt() {
         MyVector var0;
         (var0 = new MyVector()).addElement(new Command(mResources.by, 110201));
+        addAutoUseShopMenu(var0, getCurrentItemSelectByTypeUI(14));
         var0.addElement(new Command(mResources.bz, 110202));
         GameCanvas.menu.showMenu(var0);
     }
@@ -18748,6 +18923,7 @@ public final class GameScr extends mScreen implements IActionListener, IChatable
     private static void gu() {
         MyVector var0;
         (var0 = new MyVector()).addElement(new Command(mResources.by, 110181));
+        addAutoUseShopMenu(var0, getCurrentItemSelectByTypeUI(15));
         var0.addElement(new Command(mResources.bz, 110182));
         GameCanvas.menu.showMenu(var0);
     }
@@ -18755,6 +18931,7 @@ public final class GameScr extends mScreen implements IActionListener, IChatable
     private static void gv() {
         MyVector var0;
         (var0 = new MyVector()).addElement(new Command(mResources.by, 130021));
+        addAutoUseShopMenu(var0, getCurrentItemSelectByTypeUI(32));
         var0.addElement(new Command(mResources.bz, 130022));
         GameCanvas.menu.showMenu(var0);
     }
@@ -18762,6 +18939,7 @@ public final class GameScr extends mScreen implements IActionListener, IChatable
     private static void gw() {
         MyVector var0;
         (var0 = new MyVector()).addElement(new Command(mResources.by, 110161));
+        addAutoUseShopMenu(var0, getCurrentItemSelectByTypeUI(20));
         var0.addElement(new Command(mResources.bz, 110162));
         GameCanvas.menu.showMenu(var0);
     }
@@ -18769,6 +18947,7 @@ public final class GameScr extends mScreen implements IActionListener, IChatable
     private static void gx() {
         MyVector var0;
         (var0 = new MyVector()).addElement(new Command(mResources.by, 110141));
+        addAutoUseShopMenu(var0, getCurrentItemSelectByTypeUI(21));
         var0.addElement(new Command(mResources.bz, 110142));
         GameCanvas.menu.showMenu(var0);
     }
@@ -18776,6 +18955,7 @@ public final class GameScr extends mScreen implements IActionListener, IChatable
     private static void gy() {
         MyVector var0;
         (var0 = new MyVector()).addElement(new Command(mResources.by, 110121));
+        addAutoUseShopMenu(var0, getCurrentItemSelectByTypeUI(22));
         var0.addElement(new Command(mResources.bz, 110122));
         GameCanvas.menu.showMenu(var0);
     }
@@ -18783,6 +18963,7 @@ public final class GameScr extends mScreen implements IActionListener, IChatable
     private static void gz() {
         MyVector var0;
         (var0 = new MyVector()).addElement(new Command(mResources.by, 110101));
+        addAutoUseShopMenu(var0, getCurrentItemSelectByTypeUI(23));
         var0.addElement(new Command(mResources.bz, 110102));
         GameCanvas.menu.showMenu(var0);
     }
@@ -18790,6 +18971,7 @@ public final class GameScr extends mScreen implements IActionListener, IChatable
     private static void ha() {
         MyVector var0;
         (var0 = new MyVector()).addElement(new Command(mResources.by, 110081));
+        addAutoUseShopMenu(var0, getCurrentItemSelectByTypeUI(24));
         var0.addElement(new Command(mResources.bz, 110082));
         GameCanvas.menu.showMenu(var0);
     }
@@ -18797,8 +18979,16 @@ public final class GameScr extends mScreen implements IActionListener, IChatable
     private static void hb() {
         MyVector var0;
         (var0 = new MyVector()).addElement(new Command(mResources.by, 110051));
+        addAutoUseShopMenu(var0, getCurrentItemSelectByTypeUI(25));
         var0.addElement(new Command(mResources.bz, 110052));
         GameCanvas.menu.showMenu(var0);
+    }
+
+    private static void addAutoUseShopMenu(MyVector menu, Item item) {
+        if (menu != null && item != null && item.template != null) {
+            String caption = AutoUseItem.contains(item.template.id) ? "Cài Tự Dùng" : "Add List Tự Dùng";
+            menu.addElement(new Command(caption, 11000967, item));
+        }
     }
 
     private static void b(byte var0) {
@@ -20109,7 +20299,7 @@ public final class GameScr extends mScreen implements IActionListener, IChatable
 
     private static void showMenuNsoChen() {
         MyVector var0 = new MyVector();
-        var0.addElement(new Command("Auto Up Tong", 11000965));
+        var0.addElement(new Command("UpLevelVIP", 11000965));
         var0.addElement(new Command("Hướng dẫn", 11000922));
         var0.addElement(new Command("Cài đặt", 11000950));
         var0.addElement(new Command("Săn Bí Kíp", 11000934));
@@ -20144,12 +20334,13 @@ public final class GameScr extends mScreen implements IActionListener, IChatable
 
     private static void showMenuNsoChenGuide() {
         MyVector var0 = new MyVector();
-        var0.addElement(new Command("Auto Up Tong", 11000966));
+        var0.addElement(new Command("UpLevelVIP", 11000966));
         var0.addElement(new Command("Săn Boss", 11000923));
         var0.addElement(new Command("HD9x", 11000924));
         var0.addElement(new Command("Gom Do", 11000949));
         var0.addElement(new Command("Gom Sự Kiện", 11000925));
         var0.addElement(new Command("Đập Đồ", 11000926));
+        var0.addElement(new Command("Lật Hình", 11000969));
         var0.addElement(new Command("Luyện Ngọc", 11000927));
         var0.addElement(new Command("Đổi Lồng Đèn", 11000955));
         var0.addElement(new Command("Rước Đèn", 11000957));
@@ -20191,10 +20382,7 @@ public final class GameScr extends mScreen implements IActionListener, IChatable
     }
 
     private static void hu() {
-        MyVector var0 = new MyVector();
-        var0.addElement(new Command("Lật Hình", 11000800));
-        var0.addElement(new Command("Set Time Lật", 11000802));
-        GameCanvas.menu.showMenu(var0);
+        new FormAutoLuckyCard().select();
     }
 
     static {

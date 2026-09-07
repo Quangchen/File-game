@@ -2209,6 +2209,21 @@ public final class Service {
 
    }
 
+   public final void useClanItem(int indexClanItem) {
+      Message var1 = null;
+
+      try {
+         (var1 = messageNotMap((byte)-60)).writer().writeByte(indexClanItem);
+         this.session.sendMessage(var1);
+         return;
+      } catch (Exception var5) {
+         var5.printStackTrace();
+      } finally {
+         var1.cleanup();
+      }
+
+   }
+
    public final void d(Item[] var1) {
       GameCanvas.msgdlg.update();
       Message var2 = null;

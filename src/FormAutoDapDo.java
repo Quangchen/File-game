@@ -39,6 +39,9 @@ public final class FormAutoDapDo implements CommandListener {
     public static boolean AutoBuyProtect475 = true;
     public static boolean ReEquipWhenDone = true;
     public static boolean UseXuWhenLackYen = false;
+    public static boolean ExchangeLuongToYen = false;
+    public static boolean KeepLuckyCardStackable = true;
+    public static String KeepLuckyCardTypes = "26";
 
     private final Form form = new Form("Auto đập đồ");
     private final Command save = new Command("Lưu", Command.OK, 1);
@@ -49,6 +52,7 @@ public final class FormAutoDapDo implements CommandListener {
     private final ChoiceGroup optionChoice;
     private final TextField targetUpgrade;
     private final TextField delayMs;
+    private final TextField luckyKeepTypes;
 
     public FormAutoDapDo() {
         this.modeChoice = new ChoiceGroup("Loại Đập", ChoiceGroup.MULTIPLE, new String[]{
@@ -63,10 +67,13 @@ public final class FormAutoDapDo implements CommandListener {
             "Dùng BH",
             "Tự Mua BH",
             "Đập xong mặc lại",
-            "Đập yên+xu"
+            "Đập yên+xu",
+            "Giữ đồ gộp khi lật"
         }, (Image[]) null);
         this.targetUpgrade = new TextField("Đập đến +", String.valueOf(TargetUpgrade), 2, TextField.NUMERIC);
+        this.optionChoice.append("T\u1ef1 \u0111\u1ed5i L\u01b0\u1ee3ng ra Y\u00ean khi thi\u1ebfu", (Image) null);
         this.delayMs = new TextField("Delay ms", String.valueOf(DelayMs), 5, TextField.NUMERIC);
+        this.luckyKeepTypes = new TextField("Type giữ khi lật", KeepLuckyCardTypes, 120, TextField.ANY);
     }
 
     public void select() {
@@ -82,14 +89,18 @@ public final class FormAutoDapDo implements CommandListener {
         this.optionChoice.setSelectedIndex(3, AutoBuyProtect475);
         this.optionChoice.setSelectedIndex(4, ReEquipWhenDone);
         this.optionChoice.setSelectedIndex(5, UseXuWhenLackYen);
+        this.optionChoice.setSelectedIndex(6, KeepLuckyCardStackable);
+        this.optionChoice.setSelectedIndex(7, ExchangeLuongToYen);
         this.targetUpgrade.setString(String.valueOf(TargetUpgrade));
         this.delayMs.setString(String.valueOf(DelayMs));
+        this.luckyKeepTypes.setString(KeepLuckyCardTypes == null ? "26" : KeepLuckyCardTypes);
 
         this.form.append("Trạng thái: " + AutoDapDo.getStatusText() + "\n");
         this.form.append(this.modeChoice);
         this.form.append(this.optionChoice);
         this.form.append(this.targetUpgrade);
         this.form.append(this.delayMs);
+        this.form.append(this.luckyKeepTypes);
         this.form.addCommand(this.save);
         this.form.addCommand(this.start);
         this.form.addCommand(this.stop);
@@ -150,6 +161,9 @@ public final class FormAutoDapDo implements CommandListener {
             AutoBuyProtect475 = this.optionChoice.isSelected(3);
             ReEquipWhenDone = this.optionChoice.isSelected(4);
             UseXuWhenLackYen = this.optionChoice.isSelected(5);
+            KeepLuckyCardStackable = this.optionChoice.isSelected(6);
+            ExchangeLuongToYen = this.optionChoice.isSelected(7);
+            KeepLuckyCardTypes = this.luckyKeepTypes.getString().trim();
 
             if (TargetUpgrade < 1) {
                 TargetUpgrade = 1;
@@ -159,6 +173,9 @@ public final class FormAutoDapDo implements CommandListener {
             }
             if (DelayMs < 100) {
                 DelayMs = 100;
+            }
+            if (KeepLuckyCardTypes == null || KeepLuckyCardTypes.length() == 0) {
+                KeepLuckyCardTypes = "26";
             }
 
             save();
@@ -308,6 +325,9 @@ public final class FormAutoDapDo implements CommandListener {
             dataout.writeBoolean(ReEquipWhenDone);
             dataout.writeInt(ModeMask);
             dataout.writeBoolean(UseXuWhenLackYen);
+            dataout.writeBoolean(KeepLuckyCardStackable);
+            dataout.writeUTF(KeepLuckyCardTypes == null ? "26" : KeepLuckyCardTypes);
+            dataout.writeBoolean(ExchangeLuongToYen);
             dataout.flush();
 
             rs = RecordStore.openRecordStore(STORE_NAME, true);
@@ -361,6 +381,18 @@ public final class FormAutoDapDo implements CommandListener {
                 }
                 if (datain.available() > 0) {
                     UseXuWhenLackYen = datain.readBoolean();
+                }
+                if (datain.available() > 0) {
+                    KeepLuckyCardStackable = datain.readBoolean();
+                }
+                if (datain.available() > 0) {
+                    KeepLuckyCardTypes = datain.readUTF();
+                }
+                if (datain.available() > 0) {
+                    ExchangeLuongToYen = datain.readBoolean();
+                }
+                if (KeepLuckyCardTypes == null || KeepLuckyCardTypes.trim().length() == 0) {
+                    KeepLuckyCardTypes = "26";
                 }
                 sanitizeModeMask();
             }

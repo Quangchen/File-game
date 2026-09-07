@@ -27,10 +27,10 @@ public final class TileMap {
     private static int aq;
     public static String mapName1 = null;
     public static String mapName = "";
-    public static byte zoneID;
+    public static volatile byte zoneID;
     public static byte bgID;
     public static byte typeMap;
-    public static short mapID;
+    public static volatile short mapID;
     public static short p = 0;
     private static int ar;
     private static int as;
@@ -44,6 +44,10 @@ public final class TileMap {
     public static int hMiniMap;
     public static int posMiniMapX;
     public static int posMiniMapY;
+    private static final int DOI_LONG_DEN_STOP_W = 16;
+    private static final int DOI_LONG_DEN_STOP_H = 12;
+    private static int doiLongDenStopX = -1;
+    private static int doiLongDenStopY = -1;
     public static MyVector vGo = new MyVector();
     public static String[] mapNames;
     public static mHashtable locationStand = new mHashtable();
@@ -62,19 +66,19 @@ public final class TileMap {
     private static int[] arrayMap = new int[170];
     private static short[] backtrack = new short[170];
     public static int af;
-    public static boolean ag;
-    public static boolean ah;
+    public static volatile boolean ag;
+    public static volatile boolean ah;
     private static Object bf;
     private static byte[][] bg;
     private static Image[] bh;
     private static Image[] bi;
-    private static int waypointFromMap = -1;
-    private static int waypointNextMap = -1;
-    private static int waypointIndex = -1;
-    private static boolean waypointSpecial;
-    private static long waypointStartTime;
-    private static long waypointLastRetryTime;
-    private static int waypointRetryCount;
+    private static volatile int waypointFromMap = -1;
+    private static volatile int waypointNextMap = -1;
+    private static volatile int waypointIndex = -1;
+    private static volatile boolean waypointSpecial;
+    private static volatile long waypointStartTime;
+    private static volatile long waypointLastRetryTime;
+    private static volatile int waypointRetryCount;
 
     static {
         direction[0] = new short[]{27};
@@ -323,7 +327,7 @@ public final class TileMap {
 
     public static void c() {
         image1 = null;
-        System.gc();
+        NinjaUtil.requestGc();
     }
 
     static final void d() {
@@ -347,7 +351,7 @@ public final class TileMap {
             imgflowRiver = GameCanvas.loadImage("/t/wts1.png");
         }
 
-        System.gc();
+        NinjaUtil.requestGc();
     }
 
     public static void clearOptimizeImages() {
@@ -709,7 +713,7 @@ public final class TileMap {
             var4.printStackTrace();
             GameMidlet var5 = GameMidlet.instance;
             MotherCanvas.c = false;
-            System.gc();
+            NinjaUtil.requestGc();
             var5.notifyDestroyed();
         }
 
@@ -1013,8 +1017,47 @@ public final class TileMap {
 
         var3 = AutoDoiLongDen.getAutoText();
         if (var3.length() > 0) {
+            paintDoiLongDenStopButton(var0, var1 - DOI_LONG_DEN_STOP_W - 2, var2 - 2);
             mFont.tahoma_7_yellow.writeText(var0, var3, var1, var2, 0, mFont.tahoma_7_red);
+        } else {
+            doiLongDenStopX = -1;
+            doiLongDenStopY = -1;
         }
+    }
+
+    private static void paintDoiLongDenStopButton(mGraphics var0, int var1, int var2) {
+        doiLongDenStopX = var1;
+        doiLongDenStopY = var2;
+        if (doiLongDenStopX < 1) {
+            doiLongDenStopX = 1;
+        }
+        if (doiLongDenStopY < 1) {
+            doiLongDenStopY = 1;
+        }
+
+        var0.setColor(8519680);
+        var0.fillRoundRect(doiLongDenStopX, doiLongDenStopY, DOI_LONG_DEN_STOP_W, DOI_LONG_DEN_STOP_H, 3, 3);
+        var0.setColor(16777215);
+        var0.drawRoundRect(doiLongDenStopX, doiLongDenStopY, DOI_LONG_DEN_STOP_W, DOI_LONG_DEN_STOP_H, 3, 3);
+        mFont.tahoma_7b_white.writeText(var0, "x", doiLongDenStopX + DOI_LONG_DEN_STOP_W / 2, doiLongDenStopY + 1, 2, mFont.tahoma_7_red);
+    }
+
+    public static boolean checkDoiLongDenStopButton() {
+        if (doiLongDenStopX < 0 || doiLongDenStopY < 0) {
+            return false;
+        }
+
+        if (GameCanvas.b(doiLongDenStopX, doiLongDenStopY, DOI_LONG_DEN_STOP_W, DOI_LONG_DEN_STOP_H)) {
+            if (GameCanvas.isPointerClick && GameCanvas.isPointerJustRelease) {
+                AutoDoiLongDen.stop();
+                GameCanvas.isPointerClick = false;
+                GameCanvas.isPointerJustRelease = false;
+                GameCanvas.l();
+            }
+            return true;
+        }
+
+        return false;
     }
 
     public static final void c(mGraphics var0) {
@@ -2368,7 +2411,7 @@ public final class TileMap {
 
     public static void k() {
         image1 = null;
-        System.gc();
+        NinjaUtil.requestGc();
         image1 = bh[e];
         image2 = bi[e];
     }

@@ -5,9 +5,9 @@ public final class AutoSend extends Auto {
     private String[] targets;
     private int targetIndex;
     private boolean manual;
-    public static boolean a;
-    public static boolean b;
-    public static boolean c;
+    public static volatile boolean a;
+    public static volatile boolean b;
+    public static volatile boolean c;
 
     public AutoSend(int var1, int var2, String var3) {
        this(var1, var2, var3, false);

@@ -43,6 +43,7 @@ public class SettingNVDV implements CommandListener {
     public static int khuLoiDai;
     public static int mapDanhVong;
     public static int khuDanhVong;
+    public static int muaDVP;
     public static int xuCuocLoiDai;
     public static int mapCuuSat;
     public static int khuCuuSat;
@@ -73,6 +74,7 @@ public class SettingNVDV implements CommandListener {
     private TextField fieldXuCuoc;
     private TextField fieldGioDV;
     private TextField fieldPhutDV;
+    private TextField fieldMuaDVP;
     
     public SettingNVDV() {
         this.formNVDV.append(this.choiceHenGioLamDV);
@@ -99,6 +101,11 @@ public class SettingNVDV implements CommandListener {
         this.formNVDV.append(this.fieldMapCuuSat = new TextField("Map Cừu Sát", "" + mapCuuSat, 3, 3));
         this.formNVDV.append(this.fieldKhuCuuSat = new TextField("Khu Cừu Sát", "" + khuCuuSat, 3, 3));
         
+        moveFormItem(this.formNVDV, this.fieldMapDV, 3);
+        moveFormItem(this.formNVDV, this.fieldKhuDV, 4);
+        this.fieldMuaDVP = new TextField("Mua DVP 705 (shop 14)", muaDVP > 0 ? "" + muaDVP : "", 5, TextField.NUMERIC);
+        this.formNVDV.insert(5, this.fieldMuaDVP);
+
         this.formNVDV.addCommand(this.cmdSave);
         this.formNVDV.addCommand(this.cmdCancel);
         this.formNVDV.setCommandListener(this);
@@ -113,6 +120,16 @@ public class SettingNVDV implements CommandListener {
         this.choiceGietTL.setSelectedIndex(tickGietTL, true);
         this.choiceUseBHNang7.setSelectedIndex(tickUseBHNang7, true);
         this.choiceUseBHNang8.setSelectedIndex(tickUseBHNang8, true);
+    }
+
+    private static void moveFormItem(Form form, javax.microedition.lcdui.Item item, int targetIndex) {
+        for (int i = 0; i < form.size(); ++i) {
+            if (form.get(i) == item) {
+                form.delete(i);
+                break;
+            }
+        }
+        form.insert(targetIndex, item);
     }
 
     public final void show() {
@@ -160,6 +177,7 @@ public class SettingNVDV implements CommandListener {
             dos.writeInt(khuDanhVong);
             dos.writeInt(mapCuuSat);
             dos.writeInt(khuCuuSat);
+            dos.writeInt(muaDVP);
             dos.flush();
             dos.close();
             bos.flush();
@@ -199,6 +217,11 @@ public class SettingNVDV implements CommandListener {
                 khuLoiDai = Integer.parseInt(this.fieldKhuLoiDai.getString());
                 mapDanhVong = Integer.parseInt(this.fieldMapDV.getString());
                 khuDanhVong = Integer.parseInt(this.fieldKhuDV.getString());
+                String buyDvpText = this.fieldMuaDVP.getString().trim();
+                muaDVP = buyDvpText.length() == 0 ? 0 : Integer.parseInt(buyDvpText);
+                if (muaDVP < 0) {
+                    muaDVP = 0;
+                }
                 mapCuuSat = Integer.parseInt(this.fieldMapCuuSat.getString());
                 khuCuuSat = Integer.parseInt(this.fieldKhuCuuSat.getString());
                 
@@ -226,6 +249,7 @@ public class SettingNVDV implements CommandListener {
                     dos.writeInt(khuDanhVong);
                     dos.writeInt(mapCuuSat);
                     dos.writeInt(khuCuuSat);
+                    dos.writeInt(muaDVP);
                     dos.flush();
                     dos.close();
                     bos.flush();
@@ -253,6 +277,7 @@ public class SettingNVDV implements CommandListener {
         boolean saveRandomDefault = false;
         tickHenGioLamDV = 1;
         tickCuuSat = 1;
+        tickWinLoiDai = 1;
         gioADV = 0;
         phutADV = 0;
         xuCuocLoiDai = 1000000;
@@ -261,6 +286,7 @@ public class SettingNVDV implements CommandListener {
         khuLoiDai = 22;
         mapDanhVong = -1;
         khuDanhVong = -1;
+        muaDVP = 10;
         mapCuuSat = 23;
         khuCuuSat = 6;
         upgrade = 8;
@@ -289,6 +315,12 @@ public class SettingNVDV implements CommandListener {
                 khuDanhVong = dis.readInt();
                 mapCuuSat = dis.readInt();
                 khuCuuSat = dis.readInt();
+                if (dis.available() >= 4) {
+                    muaDVP = dis.readInt();
+                } else {
+                    tickWinLoiDai = 1;
+                    saveRandomDefault = true;
+                }
             } else {
                 randomDefaultTime();
                 saveRandomDefault = true;
@@ -319,12 +351,13 @@ public class SettingNVDV implements CommandListener {
         tickGietTA = 0;
         tickGietTL = 0;
         tickNangCapVP = 0;
-        tickWinLoiDai = 0;
+        tickWinLoiDai = 1;
         tickCuuSat = 0;
         tickUseBHNang7 = 0;
         tickUseBHNang8 = 0;
         tickNongDan = 0;
         xuCuocLoiDai = 0;
+        muaDVP = 10;
         mapCuuSat = 0;
         khuCuuSat = 0;
     }

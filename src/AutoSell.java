@@ -9,8 +9,8 @@ public final class AutoSell extends Auto {
     private MyVector ad;
     private MyVector ae;
     private long af;
-    public static boolean a;
-    public static boolean b;
+    public static volatile boolean a;
+    public static volatile boolean b;
  
     public AutoSell() {
     }
@@ -269,7 +269,7 @@ public final class AutoSell extends Auto {
        } else {
           var3 = System.currentTimeMillis();
  
-          while(!GameScr.ci || System.currentTimeMillis() - var3 >= 10000L) {
+          while(!GameScr.ci && System.currentTimeMillis() - var3 < 10000L) {
               try {
                   Thread.sleep(1000L);
               } catch (InterruptedException ex) {

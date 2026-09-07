@@ -39,12 +39,12 @@ public final class GameCanvas extends GameGraphics implements IActionListener {
     public static int height;
     public static int centerX;
     public static int centerY;
-    public static mScreen mScreen;
+    public static volatile mScreen mScreen;
     public static Menu menu = new Menu();
     public static SelectServerScr af;
     public static LoginScr ag;
     public static LanguageScr ah;
-    public static Dialog currentDialog;
+    public static volatile Dialog currentDialog;
     public static MsgDlg msgdlg;
     public static InputDlg ak;
     public static Input2Dlg al;
@@ -139,7 +139,7 @@ public final class GameCanvas extends GameGraphics implements IActionListener {
         }
         readMessage = new ReadMessage();
         instance = this;
-        System.gc();
+        NinjaUtil.requestGc();
         am = new Paint();
         TileMap.j();
         if (!lowGraphic) {

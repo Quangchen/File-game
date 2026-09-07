@@ -152,7 +152,7 @@ public final class AutoBuyShop {
     public static boolean buyNow(int itemId, int shopId, int count) {
         try {
             ensureLoaded();
-            if (isBusy()) {
+            if (isBusy() || !isAtShopMap() && !canLeaveCurrentMap()) {
                 return false;
             }
             return buyMissingItem(-1, itemId, shopId, count);
@@ -164,7 +164,7 @@ public final class AutoBuyShop {
     public static boolean prepareShopForBuy(int shopId) {
         try {
             ensureLoaded();
-            if (isBusy()) {
+            if (isBusy() || !isAtShopMap() && !canLeaveCurrentMap()) {
                 return false;
             }
             if (!goShopMapForBuy()) {
@@ -242,13 +242,39 @@ public final class AutoBuyShop {
 
     private static void requestShop(int shopId) {
         try {
+            clearShopItems(shopId);
             GameScr.getInstance().openUI(shopId);
-            Auto.sleep(300L);
-            if (getShopItems(shopId) == null) {
-                Service.getInstance().requestItem(shopId);
-            }
             Auto.sleep(700L);
         } catch (Exception e) {
+        }
+    }
+
+    private static void clearShopItems(int shopId) {
+        switch (shopId) {
+            case 2: GameScr.arrItemWeapon = null; break;
+            case 6: GameScr.arrItemStack = null; break;
+            case 7: GameScr.arrItemStackLock = null; break;
+            case 8: GameScr.arrItemGrocery = null; break;
+            case 9: GameScr.arrItemGroceryLock = null; break;
+            case 14: GameScr.arrItemStore = null; break;
+            case 15: GameScr.arrItemBook = null; break;
+            case 16: GameScr.arrItemLien = null; break;
+            case 17: GameScr.arrItemNhan = null; break;
+            case 18: GameScr.arrItemNgocBoi = null; break;
+            case 19: GameScr.arrItemPhu = null; break;
+            case 20: GameScr.arrItemNonNam = null; break;
+            case 21: GameScr.arrItemNonNu = null; break;
+            case 22: GameScr.arrItemAoNam = null; break;
+            case 23: GameScr.arrItemAoNu = null; break;
+            case 24: GameScr.arrItemGangTayNam = null; break;
+            case 25: GameScr.arrItemGangTayNu = null; break;
+            case 26: GameScr.arrItemQuanNam = null; break;
+            case 27: GameScr.arrItemQuanNu = null; break;
+            case 28: GameScr.arrItemGiayNam = null; break;
+            case 29: GameScr.arrItemGiayNu = null; break;
+            case 32: GameScr.arrItemFashion = null; break;
+            case 34: GameScr.arrItemClanShop = null; break;
+            case 35: GameScr.arrItemElites = null; break;
         }
     }
 
@@ -298,7 +324,7 @@ public final class AutoBuyShop {
     }
 
     private static boolean isAtShopMap() {
-        return TileMap.isTruong(TileMap.mapID) || TileMap.isLang(TileMap.mapID);
+        return TileMap.mapID != 72 && (TileMap.isTruong(TileMap.mapID) || TileMap.isLang(TileMap.mapID));
     }
 
     private static boolean waitMap(int map, long timeout) {
@@ -322,11 +348,9 @@ public final class AutoBuyShop {
             return false;
         }
 
-        return !(Code.auto instanceof AutoHD9x)
-                && !(Code.auto instanceof AutoHD9xGather)
-                && !(Code.auto instanceof AutoHD9xChest)
-                && !(Code.auto instanceof AutoHD9xReward)
-                && !(Code.auto instanceof AutoLDGT)
+        return !AutoHD9xManager.isRoundActive()
+                && !AutoBossScheduleManager.isActive()
+                && !AutoLDGT.isRunning()
                 && !(Code.auto instanceof AutoJoinClanDun);
     }
 
@@ -365,39 +389,7 @@ public final class AutoBuyShop {
     }
 
     private static Item findShopItem(int shopId, int itemId) {
-        Item item = findShopItemByType(shopId, itemId);
-        if (item != null) {
-            return item;
-        }
-
-        if ((item = findInArray(GameScr.arrItemStore, itemId)) != null) {
-            return item;
-        }
-        if ((item = findInArray(GameScr.arrItemStack, itemId)) != null) {
-            return item;
-        }
-        if ((item = findInArray(GameScr.arrItemStackLock, itemId)) != null) {
-            return item;
-        }
-        if ((item = findInArray(GameScr.arrItemGrocery, itemId)) != null) {
-            return item;
-        }
-        if ((item = findInArray(GameScr.arrItemGroceryLock, itemId)) != null) {
-            return item;
-        }
-        if ((item = findInArray(GameScr.arrItemElites, itemId)) != null) {
-            return item;
-        }
-        if ((item = findInArray(GameScr.arrItemClanShop, itemId)) != null) {
-            return item;
-        }
-        if ((item = findInArray(GameScr.arrItemBook, itemId)) != null) {
-            return item;
-        }
-        if ((item = findInArray(GameScr.arrItemFashion, itemId)) != null) {
-            return item;
-        }
-        return null;
+        return findShopItemByType(shopId, itemId);
     }
 
     private static Item findShopItemByType(int shopId, int itemId) {

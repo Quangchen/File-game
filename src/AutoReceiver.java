@@ -10,8 +10,8 @@ public final class AutoReceiver extends Auto {
    public static byte phutNhanDo;
    public static int mapNhanDo;
    public static byte khuNhanDo;
-   public static boolean f;
-   public static boolean ab;
+   public static volatile boolean f;
+   public static volatile boolean ab;
    public static short[] gatherListID = new short[120];
    private static int randomSeed;
 
@@ -255,12 +255,16 @@ public final class AutoReceiver extends Auto {
 
          Service.getInstance().j();
          if (LockGame.a(20000L)) {
-            for(int var10 = 0; var10 < 12; ++var10) {
-               if (var9[var10] != null) {
-                  int var10001 = var9[var10].indexUI;
-                  Char.getMyChar().arrItemBag[var10001] = null;
-               }
-            }
+             for(int var10 = 0; var10 < 12; ++var10) {
+                if (var9[var10] != null) {
+                   int var10001 = var9[var10].indexUI;
+                   Char me = Char.getMyChar();
+                   if (me != null && me.arrItemBag != null && var10001 >= 0
+                           && var10001 < me.arrItemBag.length && me.arrItemBag[var10001] == var9[var10]) {
+                      me.arrItemBag[var10001] = null;
+                   }
+                }
+             }
          }
 
       }

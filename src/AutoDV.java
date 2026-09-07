@@ -1,6 +1,10 @@
 
 public final class AutoDV extends Auto {
 
+    private static final int DANH_VONG_PHU_ID = 705;
+    private static final int DANH_VONG_PHU_SHOP = 14;
+    private static final long DVP_BUY_RETRY_DELAY = 10000L;
+
     public static int idQuest;
     private static int currentAmount;
     private static int totalAmount;
@@ -25,6 +29,7 @@ public final class AutoDV extends Auto {
     private static int countRemainQuest;
     private static int upgrade = 8;
     private static boolean[] tempTickSetting;
+    private static long lastDvpBuyAt;
 
     public AutoDV() {
         
@@ -41,6 +46,8 @@ public final class AutoDV extends Auto {
         isSuccessQuest = false;
         isEnded = false;
         isDone = false;
+        canNotUseDVPhu = false;
+        lastDvpBuyAt = 0L;
         txtIsComplete = "Hoàn thành nhiệm vụ. Hãy gặp Ameji để trả nhiệm vụ";
         txtIsFullQuest = "Con đã hoàn thành đủ số nhiệm vụ cho ngày hôm nay rồi";
         txtIsDoingQuest = "Con hãy hoàn thành nhiệm vụ được giao trước.";
@@ -59,10 +66,52 @@ public final class AutoDV extends Auto {
         isEnded = false;
         isDone = false;
         canNotUseDVPhu = false;
+        lastDvpBuyAt = 0L;
         itemTemplate = null;
         itemTemplate2 = null;
         item1 = null;
         item2 = null;
+    }
+
+    private static boolean prepareDanhVongPhu() {
+        int buyCount = SettingNVDV.muaDVP;
+        if (buyCount <= 0 || canNotUseDVPhu || Char.k(DANH_VONG_PHU_ID) > 0) {
+            return true;
+        }
+        long now = System.currentTimeMillis();
+        if (now - lastDvpBuyAt < DVP_BUY_RETRY_DELAY) {
+            return false;
+        }
+        if (Char.countNullSlot() <= 0) {
+            lastDvpBuyAt = now;
+            GameScr.chatPopup("Auto DV: can 1 o trong de mua DVP 705");
+            return false;
+        }
+        if (buyCount > 30000) {
+            buyCount = 30000;
+        }
+        lastDvpBuyAt = now;
+        GameScr.chatPopup("Auto DV: mua DVP 705 x" + buyCount);
+        if (!AutoBuyShop.buyNow(DANH_VONG_PHU_ID, DANH_VONG_PHU_SHOP, buyCount)) {
+            GameScr.chatPopup("Auto DV: mua DVP 705 that bai");
+            return false;
+        }
+        Auto.sleep(500L);
+        return Char.k(DANH_VONG_PHU_ID) > 0;
+    }
+
+    private static void useDanhVongPhu() {
+        if (canNotUseDVPhu) {
+            return;
+        }
+        for (int i = 0; i < 5 && !canNotUseDVPhu; ++i) {
+            int index = Char.getIndexItemById(DANH_VONG_PHU_ID);
+            if (index < 0) {
+                break;
+            }
+            Service.getInstance().useItem(index);
+            Auto.sleep(250L);
+        }
     }
 
     public final void b_() {
@@ -990,11 +1039,10 @@ public final class AutoDV extends Auto {
                     System.out.println("InfoNV");
                     GameScr.chatPopup("Xem Info NVDV " + countNV);
                     cleanItem();
-                    if (Char.getIndexItemById(705) > 0 && !canNotUseDVPhu) {
-                        for (var0 = 0; var0 < 5; ++var0) {
-                            Service.getInstance().useItem(Char.getIndexItemById(705));
-                        }
+                    if (!prepareDanhVongPhu()) {
+                        return;
                     }
+                    useDanhVongPhu();
 
                     if (Char.getIndexItemById(35) < 0 && Char.getIndexItemById(37) < 0) {
                         if (Char.getMyChar().luong >= 20) {
@@ -1015,11 +1063,10 @@ public final class AutoDV extends Auto {
                 if (idQuest == -1) {
                     System.out.println("NhanNV");
                     GameScr.chatPopup("Nhận NVDV " + countNV);
-                    if (Char.getIndexItemById(705) > 0 && !canNotUseDVPhu) {
-                        for (var0 = 0; var0 < 5; ++var0) {
-                            Service.getInstance().useItem(Char.getIndexItemById(705));
-                        }
+                    if (!prepareDanhVongPhu()) {
+                        return;
                     }
+                    useDanhVongPhu();
 
                     if (Char.getIndexItemById(35) < 0 && Char.getIndexItemById(37) < 0) {
                         if (Char.getMyChar().luong >= 20) {

@@ -93,7 +93,11 @@ public final class AutoGiaoDich extends Auto {
              for(int var10 = 0; var10 < 12; ++var10) {
                 if (var9[var10] != null) {
                    int var10001 = var9[var10].indexUI;
-                   Char.getMyChar().arrItemBag[var10001] = null;
+                   Char me = Char.getMyChar();
+                   if (me != null && me.arrItemBag != null && var10001 >= 0
+                           && var10001 < me.arrItemBag.length && me.arrItemBag[var10001] == var9[var10]) {
+                      me.arrItemBag[var10001] = null;
+                   }
                 }
              }
           }

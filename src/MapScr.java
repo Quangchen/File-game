@@ -152,7 +152,7 @@ public final class MapScr extends mScreen implements IActionListener {
         mFont.tahoma_7b_purple.clean();
         mFont.tahoma_7b_red.clean();
         mFont.tahoma_7b_white.clean();
-        System.gc();
+        NinjaUtil.requestGc();
         TileMap.p = TileMap.mapID;
     }
 
@@ -160,7 +160,7 @@ public final class MapScr extends mScreen implements IActionListener {
         super.am();
         c = null;
         d = null;
-        System.gc();
+        NinjaUtil.requestGc();
         TileMap.k();
         SmallImage.c();
         mFont.number_green.load();

@@ -32,7 +32,7 @@ public final class AutoDungHop implements Runnable {
     private static final int SHOP_GIAY_NU = 29;
 
     private static final AutoDungHopStatus AUTO_STATUS = new AutoDungHopStatus();
-    private static boolean running = false;
+    private static volatile boolean running = false;
     private static Thread thread;
     private static String currentText = "";
     private static String lastBuyPhoiError = "";

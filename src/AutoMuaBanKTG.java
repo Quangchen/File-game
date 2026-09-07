@@ -1,8 +1,8 @@
 
 
 public final class AutoMuaBanKTG implements Runnable {
-    public static long a;
-    public static boolean b;
+    public static volatile long a;
+    public static volatile boolean b;
  
     public AutoMuaBanKTG() {
     }
@@ -17,6 +17,7 @@ public final class AutoMuaBanKTG implements Runnable {
              }
  
              if (!SettingAutoMuaBan.b().equals("")) {
+                NinjaUtil.sleep(500L);
                 continue;
              }
  

@@ -35,12 +35,14 @@ public final class FormAutoUpFull implements CommandListener {
     public static boolean UseProtectUpgrade = true;
     public static boolean ExchangeLuongToYen = false;
     public static boolean UseNamLinhChiX2 = false;
+    public static boolean AutoFlipCrystal = false;
+    public static boolean AutoExpandBag = false;
     public static int TierMask = MASK_TIER_3X | MASK_TIER_4X | MASK_TIER_5X | MASK_TIER_6X;
     public static int SlotMask = MASK_SLOT_WEAPON | MASK_SLOT_ADORN | MASK_SLOT_CLOTHE;
     public static int TargetUpgrade = 12;
     public static int CheckDelayMs = 10000;
 
-    private final Form form = new Form("Auto Up Tong");
+    private final Form form = new Form("UpLevelVIP");
     private final Command save = new Command("Luu", Command.OK, 1);
     private final Command start = new Command("Chay", Command.OK, 2);
     private final Command stop = new Command("Dung", Command.OK, 3);
@@ -63,7 +65,9 @@ public final class FormAutoUpFull implements CommandListener {
             "Het yen dung xu",
             "Dung bao hiem khi dap",
             "Doi luong ra yen khi het yen",
-            "Tu mua/dung Nam linh chi 248 (x2)"
+            "Tu mua/dung Nam linh chi 248 (x2)",
+            "Tu lat hinh lay da dap do",
+            "Tu mua/dung tui vai 1-3"
         }, (Image[]) null);
         this.tierChoice = new ChoiceGroup("Set can nang", ChoiceGroup.MULTIPLE, new String[]{
             "Set 3x",
@@ -99,6 +103,8 @@ public final class FormAutoUpFull implements CommandListener {
         this.optionChoice.setSelectedIndex(6, UseProtectUpgrade);
         this.optionChoice.setSelectedIndex(7, ExchangeLuongToYen);
         this.optionChoice.setSelectedIndex(8, UseNamLinhChiX2);
+        this.optionChoice.setSelectedIndex(9, AutoFlipCrystal);
+        this.optionChoice.setSelectedIndex(10, AutoExpandBag);
         this.tierChoice.setSelectedIndex(0, (TierMask & MASK_TIER_3X) != 0);
         this.tierChoice.setSelectedIndex(1, (TierMask & MASK_TIER_4X) != 0);
         this.tierChoice.setSelectedIndex(2, (TierMask & MASK_TIER_5X) != 0);
@@ -107,7 +113,7 @@ public final class FormAutoUpFull implements CommandListener {
         this.slotChoice.setSelectedIndex(1, (SlotMask & MASK_SLOT_ADORN) != 0);
         this.slotChoice.setSelectedIndex(2, (SlotMask & MASK_SLOT_CLOTHE) != 0);
 
-        this.form.append("Lenh: uplvfull70 / setuplv / stopuplv\n");
+        this.form.append("Lenh: upvip / setuplv / stopuplv\n");
         this.form.append(this.targetLevel);
         this.form.append(this.optionChoice);
         this.form.append(this.maxBookLevel);
@@ -154,6 +160,8 @@ public final class FormAutoUpFull implements CommandListener {
             UseProtectUpgrade = this.optionChoice.isSelected(6);
             ExchangeLuongToYen = this.optionChoice.isSelected(7);
             UseNamLinhChiX2 = this.optionChoice.isSelected(8);
+            AutoFlipCrystal = this.optionChoice.isSelected(9);
+            AutoExpandBag = this.optionChoice.isSelected(10);
 
             int tierMask = 0;
             if (this.tierChoice.isSelected(0)) {
@@ -193,10 +201,10 @@ public final class FormAutoUpFull implements CommandListener {
             SlotMask = slotMask;
             sanitize();
             save();
-            GameCanvas.setText("Da luu Auto Up Tong");
+            GameCanvas.setText("Da luu UpLevelVIP");
             return true;
         } catch (Exception e) {
-            GameCanvas.setText("Loi du lieu Auto Up Tong");
+            GameCanvas.setText("Loi du lieu UpLevelVIP");
             return false;
         }
     }
@@ -296,7 +304,9 @@ public final class FormAutoUpFull implements CommandListener {
                 + (AutoSkill ? ", skill" : "")
                 + (UseProtectUpgrade ? ", bh" : ", ko bh")
                 + (ExchangeLuongToYen ? ", doi yen" : "")
-                + (UseNamLinhChiX2 ? ", x2" : "");
+                + (UseNamLinhChiX2 ? ", x2" : "")
+                + (AutoFlipCrystal ? ", lat da" : "")
+                + (AutoExpandBag ? ", tui 1-3" : "");
     }
 
     private static String getTierText() {
@@ -368,6 +378,8 @@ public final class FormAutoUpFull implements CommandListener {
             dataout.writeBoolean(UseNamLinhChiX2);
             dataout.writeBoolean(AutoPotential);
             dataout.writeBoolean(AutoSkill);
+            dataout.writeBoolean(AutoFlipCrystal);
+            dataout.writeBoolean(AutoExpandBag);
             dataout.flush();
             RMS.writeRecord(STORE_NAME, byteout.toByteArray());
             dataout.close();
@@ -414,12 +426,18 @@ public final class FormAutoUpFull implements CommandListener {
                     UseNamLinhChiX2 = datain.readBoolean();
                     AutoPotential = datain.readBoolean();
                     AutoSkill = datain.readBoolean();
+                    if (datain.available() > 0) {
+                        AutoFlipCrystal = datain.readBoolean();
+                    }
                 } else if (remaining >= 3) {
                     UseProtectUpgrade = datain.readBoolean();
                     ExchangeLuongToYen = datain.readBoolean();
                     UseNamLinhChiX2 = datain.readBoolean();
                 } else if (remaining == 1) {
                     UseNamLinhChiX2 = datain.readBoolean();
+                }
+                if (datain.available() > 0) {
+                    AutoExpandBag = datain.readBoolean();
                 }
                 datain.close();
                 bytein.close();

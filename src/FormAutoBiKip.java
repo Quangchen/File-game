@@ -65,7 +65,7 @@ public final class FormAutoBiKip implements CommandListener {
     public FormAutoBiKip() {
         this.options = new ChoiceGroup("Chỉ số cần săn", ChoiceGroup.MULTIPLE, OPTION_NAMES, (Image[]) null);
         this.minParams = new TextField("Chỉ số tối thiểu id:param", MinParams, 80, TextField.ANY);
-        this.needCount = new TextField("Cần đạt ít nhất", String.valueOf(NeedCount), 2, TextField.NUMERIC);
+        this.needCount = new TextField("Số dòng cần lấy", String.valueOf(NeedCount), 2, TextField.NUMERIC);
         this.maxAttempts = new TextField("Số lần tối đa", String.valueOf(MaxAttempts), 5, TextField.NUMERIC);
         this.delayMs = new TextField("Delay ms", String.valueOf(DelayMs), 5, TextField.NUMERIC);
         this.keepGold = new TextField("Giữ lại lượng", String.valueOf(KeepGold), 6, TextField.NUMERIC);
@@ -87,8 +87,12 @@ public final class FormAutoBiKip implements CommandListener {
 
         this.form.append("Trạng thái: " + AutoBiKip.getStatusText() + "\n");
         this.form.append("Bí kíp phải đang mặc và chưa nâng cấp.\n");
-        this.form.append("Mỗi lần luyện tốn 1000 lượng. Đặt số dòng cần trúng.\n");
-        this.form.append("Min ví dụ: 87:500,94:15,92:30\n");
+        this.form.append("Min là chỉ số bắt buộc phải có đủ param.\n");
+        this.form.append("Số dòng = bắt buộc + chỉ số phụ đã tick. Ví dụ min 3 dòng, số dòng 5 thì cần thêm 2 dòng tick.\n");
+        this.form.append("Có chỉ số săn ngoài tick sẽ bỏ qua.\n");
+        this.form.append("Min ví dụ: 99:200,87:500,94:1\n");
+        this.form.append("S\u1ed1 d\u00f2ng c\u1ea7n l\u1ea5y l\u00e0 m\u1ee9c t\u1ed1i thi\u1ec3u: nh\u1eadp 3 th\u00ec 3, 4, 5 d\u00f2ng h\u1ee3p l\u1ec7 \u0111\u1ec1u \u0111\u01b0\u1ee3c l\u1ea5y.\n");
+        this.form.append("Ch\u1ec9 s\u1ed1 kh\u00f4ng tick kh\u00f4ng \u0111\u01b0\u1ee3c t\u00ednh v\u00e0o s\u1ed1 d\u00f2ng \u0111\u1ea1t.\n");
         this.form.append(this.options);
         this.form.append(this.minParams);
         this.form.append(this.needCount);
@@ -132,13 +136,20 @@ public final class FormAutoBiKip implements CommandListener {
             KeepGold = Integer.parseInt(this.keepGold.getString().trim());
             MenuPath = this.menuPath.getString().trim();
 
-            int selectedCount = countSelected();
-            if (selectedCount == 0) {
+            int requiredCount = countRequiredMinParams();
+            int capacity = countTargetCapacity();
+            if (capacity == 0) {
                 GameCanvas.setText("Hãy chọn ít nhất 1 chỉ số");
                 return false;
             }
-            if (NeedCount <= 0 || NeedCount > selectedCount) {
-                NeedCount = selectedCount;
+            if (NeedCount <= 0) {
+                NeedCount = capacity;
+            }
+            if (NeedCount < requiredCount) {
+                NeedCount = requiredCount;
+            }
+            if (NeedCount > capacity) {
+                NeedCount = capacity;
             }
             if (MaxAttempts < 1) {
                 MaxAttempts = 1;
@@ -170,6 +181,62 @@ public final class FormAutoBiKip implements CommandListener {
             }
         }
         return count;
+    }
+
+    public static int countRequiredMinParams() {
+        int[] ids = new int[OPTION_IDS.length];
+        int[] params = new int[OPTION_IDS.length];
+        return parseRequiredMinParams(ids, params);
+    }
+
+    private static int countTargetCapacity() {
+        int[] ids = new int[OPTION_IDS.length];
+        int[] params = new int[OPTION_IDS.length];
+        int count = parseRequiredMinParams(ids, params);
+        for (int i = 0; i < OPTION_IDS.length; i++) {
+            if (Selected[i] && !contains(ids, count, OPTION_IDS[i])) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    private static int parseRequiredMinParams(int[] ids, int[] params) {
+        int count = 0;
+        try {
+            String cfg = MinParams;
+            if (cfg == null || cfg.length() == 0) {
+                return 0;
+            }
+            String[] parts = Code.splitString(cfg, ",");
+            for (int i = 0; i < parts.length; i++) {
+                String part = parts[i].trim();
+                int p = part.indexOf(':');
+                if (p < 0) {
+                    p = part.indexOf('=');
+                }
+                if (p > 0) {
+                    int id = Integer.parseInt(part.substring(0, p).trim());
+                    int param = Integer.parseInt(part.substring(p + 1).trim());
+                    if (id > 0 && !contains(ids, count, id) && count < ids.length) {
+                        ids[count] = id;
+                        params[count] = param > 0 ? param : 1;
+                        count++;
+                    }
+                }
+            }
+        } catch (Exception e) {
+        }
+        return count;
+    }
+
+    private static boolean contains(int[] arr, int size, int value) {
+        for (int i = 0; i < size; i++) {
+            if (arr[i] == value) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static void show(Displayable current) {
@@ -264,15 +331,25 @@ public final class FormAutoBiKip implements CommandListener {
     }
 
     private static void ensureDefault() {
-        if (countSelected() == 0) {
+        int requiredCount = countRequiredMinParams();
+        int capacity = countTargetCapacity();
+        if (countSelected() == 0 && requiredCount == 0) {
             setSelectedById(87, true);
             setSelectedById(94, true);
         }
         if (MinParams == null || MinParams.length() == 0) {
             MinParams = "87:500,94:15";
         }
-        if (NeedCount <= 0 || NeedCount > countSelected()) {
-            NeedCount = countSelected();
+        requiredCount = countRequiredMinParams();
+        capacity = countTargetCapacity();
+        if (NeedCount <= 0) {
+            NeedCount = capacity;
+        }
+        if (NeedCount < requiredCount) {
+            NeedCount = requiredCount;
+        }
+        if (NeedCount > capacity) {
+            NeedCount = capacity;
         }
         if (MaxAttempts <= 0) {
             MaxAttempts = 200;

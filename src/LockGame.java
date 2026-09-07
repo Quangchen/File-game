@@ -331,20 +331,20 @@ public final class LockGame {
              return true;
           }
        } else {
-          long var2 = System.currentTimeMillis();
-          synchronized(lock) {
-             try {
-                lock.wait(20000L);
-             } catch (InterruptedException var6) {
-             }
-          }
+           long var2 = System.currentTimeMillis();
+           synchronized(lock) {
+              try {
+                 lock.wait(var0);
+              } catch (InterruptedException var6) {
+              }
+           }
  
-          if (AutoSell.a) {
-             AutoSell.a = false;
-             return false;
-          } else {
-             return System.currentTimeMillis() - var2 < 20000L;
-          }
+           if (AutoSell.a) {
+              AutoSell.a = false;
+              return false;
+           } else {
+              return System.currentTimeMillis() - var2 < var0;
+           }
        }
     }
  

@@ -21,7 +21,7 @@ public final class AutoTinhLuyen implements Runnable {
     private static final int ACTION_CONVERT = 1;
     private static final int ACTION_REFINE = 2;
 
-    private static boolean running = false;
+    private static volatile boolean running = false;
     private static Thread thread;
     private static int activeItemId = -1;
     private static int activeTemplateId = -1;

@@ -28,7 +28,7 @@ public final class AutoRuocDen extends Auto {
     public static int MaxEscortMinute = 10;
 
     private static boolean loaded = false;
-    private static boolean running = false;
+    private static volatile boolean running = false;
     private static String status = "Tắt";
     private static int lastScheduleKey = -1;
     private static long lastScheduleCheck = 0L;

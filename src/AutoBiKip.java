@@ -6,7 +6,7 @@ public final class AutoBiKip implements Runnable {
     private static final int CONFIRM_LUYEN_BIKIP = 110;
     private static final int FEE_GOLD = 1000;
 
-    private static boolean running = false;
+    private static volatile boolean running = false;
     private static Thread thread;
     private static String currentText = "";
     private static int attempts = 0;
@@ -18,7 +18,7 @@ public final class AutoBiKip implements Runnable {
             return;
         }
         FormAutoBiKip.load();
-        if (FormAutoBiKip.countSelected() == 0) {
+        if (FormAutoBiKip.countSelected() == 0 && FormAutoBiKip.countRequiredMinParams() == 0) {
             GameScr.chatPopup("Auto bí kíp: chưa chọn chỉ số");
             return;
         }
@@ -86,9 +86,15 @@ public final class AutoBiKip implements Runnable {
                     break;
                 }
 
-                int matched = countMatched(biKip);
-                currentText = "Bí kíp " + matched + "/" + FormAutoBiKip.NeedCount + " lần:" + attempts + " tốn:" + spentGold;
-                if (matched >= FormAutoBiKip.NeedCount) {
+                MatchResult matchInfo = evaluateMatch(biKip);
+                currentText = "Bí kíp " + matchInfo.matched + "/" + FormAutoBiKip.NeedCount + " lần:" + attempts + " tốn:" + spentGold;
+                if (matchInfo.requiredMatched < matchInfo.requiredTotal) {
+                    currentText = currentText + " min:" + matchInfo.requiredMatched + "/" + matchInfo.requiredTotal;
+                }
+                if (matchInfo.invalidExtra > 0) {
+                    currentText = currentText + " sai:" + matchInfo.invalidExtra;
+                }
+                if (matchInfo.done) {
                     finish("Bí kíp đã đạt chỉ số yêu cầu");
                     break;
                 }
@@ -227,24 +233,88 @@ public final class AutoBiKip implements Runnable {
     }
 
     private static int countMatched(Item item) {
-        int count = 0;
+        MatchResult result = evaluateMatch(item);
+        return result.matched;
+    }
+
+    private static boolean isMatchedDone(Item item) {
+        return evaluateMatch(item).done;
+    }
+
+    private static MatchResult evaluateMatch(Item item) {
+        MatchResult result = new MatchResult();
+        int[] requiredIds = new int[FormAutoBiKip.OPTION_IDS.length];
+        int[] requiredParams = new int[FormAutoBiKip.OPTION_IDS.length];
+        result.requiredTotal = parseRequiredMinParams(requiredIds, requiredParams);
+
+        for (int i = 0; i < result.requiredTotal; i++) {
+            if (getOptionParam(item, requiredIds[i]) >= requiredParams[i]) {
+                result.requiredMatched++;
+            }
+        }
+
+        result.matched = result.requiredMatched;
         for (int i = 0; i < FormAutoBiKip.OPTION_IDS.length; i++) {
             if (FormAutoBiKip.Selected[i]) {
                 int optionId = FormAutoBiKip.OPTION_IDS[i];
-                int param = getOptionParam(item, optionId);
-                if (param >= minParam(optionId)) {
+                if (!contains(requiredIds, result.requiredTotal, optionId) && getOptionParam(item, optionId) > 0) {
+                    result.matched++;
+                }
+            }
+        }
+
+        result.invalidExtra = countInvalidExtraOptions(item, requiredIds, result.requiredTotal);
+        result.done = result.requiredMatched == result.requiredTotal
+                && result.invalidExtra == 0
+                && result.matched >= FormAutoBiKip.NeedCount;
+        return result;
+    }
+
+    private static int countInvalidExtraOptions(Item item, int[] requiredIds, int requiredTotal) {
+        int count = 0;
+        try {
+            if (item == null || item.options == null) {
+                return 0;
+            }
+            for (int i = 0; i < item.options.size(); i++) {
+                ItemOption option = (ItemOption) item.options.elementAt(i);
+                if (option == null || option.optionTemplate == null || option.param <= 0) {
+                    continue;
+                }
+                int optionId = option.optionTemplate.id;
+                if (isHuntOption(optionId) && !contains(requiredIds, requiredTotal, optionId) && !isSelectedOption(optionId)) {
                     count++;
                 }
             }
+        } catch (Exception e) {
         }
         return count;
     }
 
-    private static int minParam(int optionId) {
+    private static boolean isSelectedOption(int optionId) {
+        for (int i = 0; i < FormAutoBiKip.OPTION_IDS.length; i++) {
+            if (FormAutoBiKip.OPTION_IDS[i] == optionId) {
+                return FormAutoBiKip.Selected[i];
+            }
+        }
+        return false;
+    }
+
+    private static boolean isHuntOption(int optionId) {
+        for (int i = 0; i < FormAutoBiKip.OPTION_IDS.length; i++) {
+            if (FormAutoBiKip.OPTION_IDS[i] == optionId) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static int parseRequiredMinParams(int[] ids, int[] params) {
+        int count = 0;
         try {
             String cfg = FormAutoBiKip.MinParams;
             if (cfg == null || cfg.length() == 0) {
-                return 1;
+                return 0;
             }
             String[] parts = Code.splitString(cfg, ",");
             for (int i = 0; i < parts.length; i++) {
@@ -255,14 +325,26 @@ public final class AutoBiKip implements Runnable {
                 }
                 if (p > 0) {
                     int id = Integer.parseInt(part.substring(0, p).trim());
-                    if (id == optionId) {
-                        return Integer.parseInt(part.substring(p + 1).trim());
+                    int param = Integer.parseInt(part.substring(p + 1).trim());
+                    if (id > 0 && !contains(ids, count, id) && count < ids.length) {
+                        ids[count] = id;
+                        params[count] = param > 0 ? param : 1;
+                        count++;
                     }
                 }
             }
         } catch (Exception e) {
         }
-        return 1;
+        return count;
+    }
+
+    private static boolean contains(int[] arr, int size, int value) {
+        for (int i = 0; i < size; i++) {
+            if (arr[i] == value) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static int getOptionParam(Item item, int optionId) {
@@ -373,5 +455,13 @@ public final class AutoBiKip implements Runnable {
             Thread.sleep(ms);
         } catch (Exception e) {
         }
+    }
+
+    private static final class MatchResult {
+        int requiredTotal;
+        int requiredMatched;
+        int matched;
+        int invalidExtra;
+        boolean done;
     }
 }

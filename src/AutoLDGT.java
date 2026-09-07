@@ -18,20 +18,22 @@ public final class AutoLDGT extends Auto {
 
     private static final int TIME_WAIT = 65;
 
-    public static boolean clanCall = false;
-    public static long clanCallAt = 0L;
-    public static boolean clanOpen80 = false;
-    public static long clanOpen80At = 0L;
-    public static boolean clanKey87 = false;
-    public static boolean clanKey88 = false;
-    public static boolean clanKey89 = false;
-    public static boolean clanFinish = false;
-    public static String clanRoundId = "";
-    public static String clanFinishedRoundId = "";
-    private static boolean clanInviteReceived = false;
-    private static long clanInviteAt = 0L;
-    private static int lastScheduleDayKey = -1;
-    private static long lastScheduleCheckAt = 0L;
+    public static volatile boolean clanCall = false;
+    public static volatile long clanCallAt = 0L;
+    public static volatile boolean clanOpen80 = false;
+    public static volatile long clanOpen80At = 0L;
+    public static volatile boolean clanKey87 = false;
+    public static volatile boolean clanKey88 = false;
+    public static volatile boolean clanKey89 = false;
+    public static volatile boolean clanFinish = false;
+    public static volatile String clanRoundId = "";
+    public static volatile String clanFinishedRoundId = "";
+    private static volatile boolean clanInviteReceived = false;
+    private static volatile long clanInviteAt = 0L;
+    private static volatile long lastClanInfoUpdateAt = 0L;
+    private static volatile long lastClanItemUpdateAt = 0L;
+    private static volatile int lastScheduleDayKey = -1;
+    private static volatile long lastScheduleCheckAt = 0L;
 
     private long lastActionAt;
     private long lastInfoAt;
@@ -60,10 +62,16 @@ public final class AutoLDGT extends Auto {
 
     private long useClanCardStartAt;
     private long lastRequestClanStoreAt;
+    private long retryClanCardUseAfter;
 
     private int clanCardQtyBefore;
+    private int clanDunTurnBefore;
+    private int clanUseCardBefore;
     private int tryEnterCount;
     private int clanCardBefore = -1;
+    private volatile boolean clanCardUseConfirmed;
+    private volatile boolean clanCardUseFailed;
+    private volatile String clanCardFailReason;
 
     public AutoLDGT() {
         super.a();
@@ -91,8 +99,14 @@ public final class AutoLDGT extends Auto {
         this.sentUseClanCard = false;
         this.useClanCardStartAt = 0L;
         this.lastRequestClanStoreAt = 0L;
+        this.retryClanCardUseAfter = 0L;
         this.clanCardQtyBefore = -1;
+        this.clanDunTurnBefore = -1;
+        this.clanUseCardBefore = -1;
         this.tryEnterCount = 0;
+        this.clanCardUseConfirmed = false;
+        this.clanCardUseFailed = false;
+        this.clanCardFailReason = "";
     }
 
     public static void resetClanSignals() {
@@ -188,6 +202,14 @@ public final class AutoLDGT extends Auto {
                 || cmd.equals("LDGT_FINISH");
     }
 
+    public static void onClanInfoUpdated() {
+        lastClanInfoUpdateAt = System.currentTimeMillis();
+    }
+
+    public static void onClanItemUpdated() {
+        lastClanItemUpdateAt = System.currentTimeMillis();
+    }
+
     private static String normalizeInfoText(String text) {
         if (text == null) {
             return "";
@@ -249,7 +271,36 @@ public final class AutoLDGT extends Auto {
                     || plain.indexOf("hanh trinh lanh dia gia toc da ket thuc") >= 0) {
                 markClanFinished();
             }
+
+            AutoLDGT current = getRunningAutoLDGT();
+            if (current != null) {
+                current.onClanCardInfo(plain);
+            }
         } catch (Exception e) {
+        }
+    }
+
+    private void onClanCardInfo(String plain) {
+        if (!this.tryingUseClanCard || plain == null) {
+            return;
+        }
+
+        if (plain.indexOf("gia toc nhan duoc them 1 lan lanh dia gia toc") >= 0
+                || plain.indexOf("gia toc van con luot vao lanh dia") >= 0) {
+            this.clanCardUseConfirmed = true;
+            return;
+        }
+
+        if (plain.indexOf("lanh dia hien tai van chua ket thuc") >= 0) {
+            this.sentUseClanCard = false;
+            this.retryClanCardUseAfter = System.currentTimeMillis() + 5000L;
+            this.info("LDGT: Lãnh địa chưa đóng hẳn, chờ dùng lại LBGT");
+            return;
+        }
+
+        if (plain.indexOf("da het luot su dung") >= 0) {
+            this.clanCardUseFailed = true;
+            this.clanCardFailReason = "đã hết lượt dùng LBGT";
         }
     }
 
@@ -361,6 +412,10 @@ public final class AutoLDGT extends Auto {
 
     private static boolean isAutoLDGTRunning() {
         return getRunningAutoLDGT() != null;
+    }
+
+    public static boolean isRunning() {
+        return isAutoLDGTRunning();
     }
 
     protected final void run() {
@@ -954,6 +1009,12 @@ public final class AutoLDGT extends Auto {
             this.useClanCardStartAt = System.currentTimeMillis();
             this.lastRequestClanStoreAt = 0L;
             this.clanCardQtyBefore = -1;
+            this.clanDunTurnBefore = Char.clan != null ? Char.clan.coin : -1;
+            this.clanUseCardBefore = Char.clan != null ? Char.clan.use_card : -1;
+            this.clanCardUseConfirmed = false;
+            this.clanCardUseFailed = false;
+            this.clanCardFailReason = "";
+            this.retryClanCardUseAfter = 0L;
 
             this.info("LDGT: Mở kho gia tộc kiểm tra lệnh bài 281");
 
@@ -961,6 +1022,7 @@ public final class AutoLDGT extends Auto {
             if (Char.clan != null) {
                 Char.clan.items = null; // clear cache cũ
             }
+            Service.getInstance().requestClanInfo();
             Service.getInstance().requestClanItem();
         } catch (Exception e) {
         }
@@ -979,16 +1041,30 @@ public final class AutoLDGT extends Auto {
         try {
             long now = System.currentTimeMillis();
 
-            if (now - this.useClanCardStartAt > 30000L) {
-                this.info("LDGT: 30s không thêm được lượt, kết thúc auto");
+            if (this.clanCardUseFailed) {
+                this.info("LDGT: " + this.clanCardFailReason + ", kết thúc auto");
                 this.tryingUseClanCard = false;
                 clanFinish = true;
                 this.finishAndReturn();
                 return;
             }
 
-            if (now - this.lastRequestClanStoreAt > 3000L) {
+            if (this.clanCardUseConfirmed || this.isClanCardUseConfirmedByData()) {
+                this.startSecondRoundAfterClanCard();
+                return;
+            }
+
+            if (now - this.useClanCardStartAt > 60000L) {
+                this.info("LDGT: 60s không thêm được lượt, kết thúc auto");
+                this.tryingUseClanCard = false;
+                clanFinish = true;
+                this.finishAndReturn();
+                return;
+            }
+
+            if (now - this.lastRequestClanStoreAt > 2000L) {
                 this.lastRequestClanStoreAt = now;
+                Service.getInstance().requestClanInfo();
                 Service.getInstance().requestClanItem();
             }
 
@@ -998,8 +1074,27 @@ public final class AutoLDGT extends Auto {
                 return;
             }
 
+            if (this.clanDunTurnBefore < 0 && lastClanInfoUpdateAt >= this.useClanCardStartAt) {
+                this.clanDunTurnBefore = Char.clan.coin;
+            }
+
+            if (this.clanUseCardBefore < 0 && lastClanInfoUpdateAt >= this.useClanCardStartAt) {
+                this.clanUseCardBefore = Char.clan.use_card;
+            }
+
+            if (!this.sentUseClanCard && lastClanInfoUpdateAt >= this.useClanCardStartAt && Char.clan.coin > 0) {
+                this.info("LDGT: Gia tộc còn lượt, bắt đầu đi lượt 2");
+                this.startSecondRoundAfterClanCard();
+                return;
+            }
+
+            if (now < this.retryClanCardUseAfter) {
+                this.info("LDGT: Chờ dùng lại LBGT");
+                return;
+            }
+
             if (Char.clan.items == null) {
-                this.info("LDGT: Chờ load kho mới");
+                this.info("LDGT: Chờ load kho gia tộc");
                 return;
             }
 
@@ -1018,47 +1113,100 @@ public final class AutoLDGT extends Auto {
 
             if (!this.sentUseClanCard) {
                 if (index < 0 || qty <= 0) {
-                    this.info("LDGT: Không có lệnh bài gia tộc 281 trong kho");
+                    this.info("LDGT: Không có LBGT 281 trong kho");
+                    if (lastClanItemUpdateAt >= this.useClanCardStartAt && now - this.useClanCardStartAt > 8000L) {
+                        this.clanCardUseFailed = true;
+                        this.clanCardFailReason = "không có LBGT 281 trong kho";
+                    }
                     return;
                 }
 
                 this.clanCardQtyBefore = qty;
                 this.sentUseClanCard = true;
 
-                GameScr.indexSelect = index;
-                Service.getInstance().ai();
+                Service.getInstance().useClanItem(index);
 
                 this.info("LDGT: Dùng lệnh bài 281, số lượng trước: " + qty);
                 return;
             }
 
             if (index < 0 || qty < this.clanCardQtyBefore) {
-                this.info("LDGT: Lệnh bài 281 đã giảm, bắt đầu đi lượt 2");
-
-                this.tryingUseClanCard = false;
-                this.waitingRealFinish = false;
-
-                clanFinish = false;
-                resetClanSignals();
-
-                this.invited = false;
-                this.inviteRetryCount = 0;
-                this.lastInviteRetryAt = 0L;
-                this.enteredWaitMapAt = 0L;
-                this.waitLastMapAt = 0L;
-                this.waitFinishAt = 0L;
-
-                this.resetWaitingNext();
-
-                this.lastActionAt = 0L;
-
-                this.openTerritoryByNpc0();
+                this.info("LDGT: LBGT 281 đã giảm, bắt đầu đi lượt 2");
+                this.startSecondRoundAfterClanCard();
                 return;
             }
 
-            this.info("LDGT: Chờ xác nhận số lượng lệnh bài giảm");
+            this.info("LDGT: Chờ xác nhận LBGT");
         } catch (Exception e) {
         }
+    }
+
+    private boolean isClanCardUseConfirmedByData() {
+        if (!this.sentUseClanCard || Char.clan == null) {
+            return false;
+        }
+
+        boolean freshInfo = lastClanInfoUpdateAt >= this.useClanCardStartAt;
+        if (freshInfo) {
+            if (this.clanDunTurnBefore >= 0 && Char.clan.coin > this.clanDunTurnBefore) {
+                return true;
+            }
+
+            if (this.clanUseCardBefore >= 0 && Char.clan.use_card < this.clanUseCardBefore) {
+                return true;
+            }
+        }
+
+        if (Char.clan.items == null || this.clanCardQtyBefore < 0 || lastClanItemUpdateAt < this.useClanCardStartAt) {
+            return false;
+        }
+
+        int qty = this.getClanCardQuantity();
+        return qty < 0 || qty < this.clanCardQtyBefore;
+    }
+
+    private int getClanCardQuantity() {
+        try {
+            if (Char.clan == null || Char.clan.items == null) {
+                return -1;
+            }
+
+            for (int i = 0; i < Char.clan.items.length; i++) {
+                Item it = Char.clan.items[i];
+                if (it != null && it.template != null && it.template.id == ITEM_LENH_BAI_GT) {
+                    return it.quantity;
+                }
+            }
+        } catch (Exception e) {
+        }
+        return -1;
+    }
+
+    private void startSecondRoundAfterClanCard() {
+        this.tryingUseClanCard = false;
+        this.waitingRealFinish = false;
+        this.clanCardUseConfirmed = false;
+        this.clanCardUseFailed = false;
+        this.clanCardFailReason = "";
+        this.retryClanCardUseAfter = 0L;
+
+        clanFinish = false;
+        resetClanSignals();
+
+        this.invited = false;
+        this.inviteRetryCount = 0;
+        this.lastInviteRetryAt = 0L;
+        this.enteredWaitMapAt = 0L;
+        this.waitLastMapAt = 0L;
+        this.waitFinishAt = 0L;
+        this.enterStartAt = 0L;
+        this.lastAcceptInviteAt = 0L;
+
+        this.resetWaitingNext();
+
+        this.lastActionAt = 0L;
+        this.info("LDGT: Bắt đầu đi lượt 2");
+        this.openTerritoryByNpc0();
     }
 
     private void finishAndReturn() {
@@ -1078,7 +1226,13 @@ public final class AutoLDGT extends Auto {
             this.sentUseClanCard = false;
             this.useClanCardStartAt = 0L;
             this.lastRequestClanStoreAt = 0L;
+            this.retryClanCardUseAfter = 0L;
             this.clanCardQtyBefore = -1;
+            this.clanDunTurnBefore = -1;
+            this.clanUseCardBefore = -1;
+            this.clanCardUseConfirmed = false;
+            this.clanCardUseFailed = false;
+            this.clanCardFailReason = "";
             this.inviteRetryCount = 0;
             this.lastInviteRetryAt = 0L;
 

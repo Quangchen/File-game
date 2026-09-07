@@ -198,12 +198,12 @@ public final class AutoUpLevel extends Auto {
         }
 
         if (targetLevel <= 0) {
-            GameScr.chatPopup("Dung: uplvfull70");
+            GameScr.chatPopup("Dung: upvip");
             return true;
         }
 
         Code.setAuto(new AutoUpLevel(targetLevel, false, true));
-        GameScr.chatPopup("Auto Up Tong den " + targetLevel + " (" + FormAutoUpFull.getSummary() + ")");
+        GameScr.chatPopup("UpLevelVIP den " + targetLevel + " (" + FormAutoUpFull.getSummary() + ")");
         return true;
     }
 
@@ -217,6 +217,17 @@ public final class AutoUpLevel extends Auto {
         }
 
         return true;
+    }
+
+    public static boolean isRunningFullMode() {
+        Auto current = Code.auto;
+        for (int i = 0; current != null && i < 32; ++i) {
+            if (current instanceof AutoUpLevel && ((AutoUpLevel) current).fullMode) {
+                return true;
+            }
+            current = current.instance;
+        }
+        return false;
     }
 
     protected final void run() {
@@ -261,7 +272,7 @@ public final class AutoUpLevel extends Auto {
         }
 
         if (me.cLevel >= this.targetLevel) {
-            this.finish((this.fullMode ? "Auto Up Tong: xong level " : this.usePhanThan ? "Auto Up PT: xong level " : "Auto Up LV: xong level ") + this.targetLevel);
+            this.finish((this.fullMode ? "UpLevelVIP: xong level " : this.usePhanThan ? "Auto Up PT: xong level " : "Auto Up LV: xong level ") + this.targetLevel);
             return;
         }
 
@@ -310,7 +321,7 @@ public final class AutoUpLevel extends Auto {
         int level = me == null ? 0 : me.cLevel;
         if (this.fullMode) {
             String text = AutoUpFullSupport.getStatusText();
-            return "Auto Up Tong " + level + "/" + this.targetLevel + (text.length() > 0 ? " " + text : "") + " map " + super.mapID + " khu " + TileMap.zoneID;
+            return "UpLevelVIP " + level + "/" + this.targetLevel + (text.length() > 0 ? " " + text : "") + " map " + super.mapID + " khu " + TileMap.zoneID;
         }
         return (this.usePhanThan ? "Auto Up PT " : "Auto Up LV ") + level + "/" + this.targetLevel + " map " + super.mapID + " khu " + TileMap.zoneID;
     }

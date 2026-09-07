@@ -39,7 +39,7 @@ public final class SmallImage {
 
    public static void b() {
       imgbig = null;
-      System.gc();
+      NinjaUtil.requestGc();
    }
 
    public static void clearDynamicCache() {
@@ -51,7 +51,7 @@ public final class SmallImage {
 
    public static void c() {
       imgbig = null;
-      System.gc();
+      NinjaUtil.requestGc();
       imgbig = new Image[]{GameCanvas.loadImage("/img/Big0.png"), GameCanvas.loadImage("/img/Big1.png"), GameCanvas.loadImage("/img/Big2.png"), GameCanvas.loadImage("/img/Big3.png"), GameCanvas.loadImage("/img/Big4.png")};
       Image.createRGBImage(new int[]{-2013265920}, 1, 1, true);
    }

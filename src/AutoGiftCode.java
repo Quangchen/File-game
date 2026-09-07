@@ -40,7 +40,7 @@ public final class AutoGiftCode extends Auto {
     public static boolean StopWhenBagFull = true;
 
     private static boolean loaded = false;
-    private static boolean running = false;
+    private static volatile boolean running = false;
     private static String status = "Tat";
     private static String loginChar = "";
     private static String startedLoginChar = "";

@@ -28,6 +28,7 @@ public final class AutoUseItem {
     private static int pendingUseRule = -1;
     private static int pendingUseItemId = -1;
     private static int pendingUseBodySlot = -1;
+    private static int pendingUseQuantity = -1;
     private static long pendingUseAt = 0L;
 
     private AutoUseItem() {
@@ -122,6 +123,40 @@ public final class AutoUseItem {
         return index;
     }
 
+    public static int addFromShop(Item item) {
+        if (item == null || item.template == null || item.template.id <= 0 || item.typeUI <= 0) {
+            return -1;
+        }
+
+        int itemId = item.template.id;
+        int index = findIndexById(itemId);
+        boolean isNew = index < 0;
+        if (isNew) {
+            index = findEmptyIndex();
+            if (index < 0) {
+                sort();
+                index = findEmptyIndex();
+            }
+        }
+
+        if (index < 0) {
+            return -1;
+        }
+
+        autoBuy[index] = true;
+        if (isNew) {
+            itemIds[index] = (short) itemId;
+            enabled[index] = true;
+            checkEffect[index] = true;
+            delayMs[index] = 5000;
+            shopIds[index] = item.typeUI;
+            buyCounts[index] = 1;
+            bodyIndex[index] = item.isTypeBody() ? item.template.type : -1;
+        }
+        save();
+        return index;
+    }
+
     public static void updateRule(int index, int itemId, boolean isEnabled, boolean isAutoBuy, boolean isCheckEffect, int delay, int shopId, int buyCount, int bodySlot) {
         if (index < 0 || index >= itemIds.length || itemId <= 0) {
             return;
@@ -202,9 +237,10 @@ public final class AutoUseItem {
 
                 int indexBag = Char.getIndexItemById(itemId);
                 if (indexBag >= 0) {
+                    int beforeQuantity = countItemQuantity(itemId);
                     Service.getInstance().useItem(indexBag);
                     lastUseAt[i] = now;
-                    markPendingUse(i, itemId, now);
+                    markPendingUse(i, itemId, beforeQuantity, now);
                     return;
                 }
 
@@ -231,10 +267,11 @@ public final class AutoUseItem {
         return !checkEffect[index] || !hasEffect(itemId);
     }
 
-    private static void markPendingUse(int index, int itemId, long now) {
+    private static void markPendingUse(int index, int itemId, int beforeQuantity, long now) {
         pendingUseRule = index;
         pendingUseItemId = itemId;
         pendingUseBodySlot = index >= 0 && index < bodyIndex.length ? bodyIndex[index] : -1;
+        pendingUseQuantity = beforeQuantity;
         pendingUseAt = now;
     }
 
@@ -266,6 +303,10 @@ public final class AutoUseItem {
                 return true;
             }
 
+            if (pendingUseQuantity >= 0 && countItemQuantity(pendingUseItemId) < pendingUseQuantity) {
+                return true;
+            }
+
             if (pendingUseRule >= 0 && pendingUseRule < MAX_RULE && pendingUseBodySlot < 0 && !shouldUse(pendingUseRule, pendingUseItemId)) {
                 return true;
             }
@@ -280,7 +321,24 @@ public final class AutoUseItem {
         pendingUseRule = -1;
         pendingUseItemId = -1;
         pendingUseBodySlot = -1;
+        pendingUseQuantity = -1;
         pendingUseAt = 0L;
+    }
+
+    private static int countItemQuantity(int itemId) {
+        Char me = Char.getMyChar();
+        if (me == null || me.arrItemBag == null) {
+            return 0;
+        }
+
+        int total = 0;
+        for (int i = 0; i < me.arrItemBag.length; ++i) {
+            Item item = me.arrItemBag[i];
+            if (item != null && item.template != null && item.template.id == itemId) {
+                total += item.quantity;
+            }
+        }
+        return total;
     }
 
     private static boolean hasEffect(int itemId) {

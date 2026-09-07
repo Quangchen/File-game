@@ -44,12 +44,13 @@ final class MessageCollector implements Runnable {
              byte[] var10 = new byte[var2];
              var5 = 0;
              int var6 = 0;
+             this.session.i += 5;
  
              while(var6 != -1 && var5 < var2) {
                 if ((var6 = this.session.c.read(var10, var5, var2 - var5)) > 0) {
                    var5 += var6;
                    Session_ME var10000 = this.session;
-                   var10000.i += var5 + 5;
+                   var10000.i += var6;
                    var4 = this.session.i + this.session.h;
                    this.session.l = var4 / 1024 + "." + var4 % 1024 / 102 + "Kb";
                 }

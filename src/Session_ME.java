@@ -10,8 +10,8 @@ public final class Session_ME implements ISession_ME {
    public DataInputStream c;
    public IController d;
    public SocketConnection e;
-   public boolean connected;
-   public boolean g;
+   public volatile boolean connected;
+   public volatile boolean g;
    private Sender q = new Sender(this);
    private MessageCollector r = new MessageCollector(this);
    private Thread s;
@@ -21,7 +21,7 @@ public final class Session_ME implements ISession_ME {
    public int h;
    public int i;
    public long j;
-   private boolean getKeyComplete;
+   private volatile boolean getKeyComplete;
    public byte[] k = null;
    private byte x;
    private byte y;
@@ -30,7 +30,7 @@ public final class Session_ME implements ISession_ME {
    public static String ip;
    public static int port;
    public static byte o;
-   public static boolean p;
+   public static volatile boolean p;
    private static Object aa = new Object();
    public static long ping = 0;
 
@@ -177,7 +177,7 @@ public final class Session_ME implements ISession_ME {
             this.v = null;
          }
 
-         System.gc();
+         NinjaUtil.requestGc();
       } catch (Exception var2) {
          var2.printStackTrace();
       }

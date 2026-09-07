@@ -58,7 +58,10 @@ public class ChatCommandExtend {
                 int var3 = CountUpItem.g - CountUpItem.c;
                 int var4 = CountUpItem.h - CountUpItem.d;
                 var10 = (int)((System.currentTimeMillis() - Code.auto.o) / 1000L);
-                GameScr.chatPopup("Up " + ItemTemplateManager.get((short)454).name + " : " + var6 + " " + ItemTemplateManager.get((short)455).name + " : " + var7 + " " + ItemTemplateManager.get((short)456).name + " : " + var3 + " " + ItemTemplateManager.get((short)457).name + " : " + var4 + " trong " + NinjaUtil.b(var10) + " TB / 1h: " + ItemTemplateManager.get((short)454).name + " = " + 3600 * var6 / var10 + " " + ItemTemplateManager.get((short)455).name + " = " + 3600 * var7 / var10 + " " + ItemTemplateManager.get((short)456).name + " = " + 3600 * var3 / var10 + " " + ItemTemplateManager.get((short)457).name + " = " + 3600 * var4 / var10);
+                if (var10 <= 0) {
+                   var10 = 1;
+                }
+                GameScr.chatPopup("Up " + ItemTemplateManager.get((short)454).name + " : " + var6 + " " + ItemTemplateManager.get((short)455).name + " : " + var7 + " " + ItemTemplateManager.get((short)456).name + " : " + var3 + " " + ItemTemplateManager.get((short)457).name + " : " + var4 + " trong " + NinjaUtil.b(var10) + " TB / 1h: " + ItemTemplateManager.get((short)454).name + " = " + 3600L * var6 / var10 + " " + ItemTemplateManager.get((short)455).name + " = " + 3600L * var7 / var10 + " " + ItemTemplateManager.get((short)456).name + " = " + 3600L * var3 / var10 + " " + ItemTemplateManager.get((short)457).name + " = " + 3600L * var4 / var10);
              }
  
              return true;

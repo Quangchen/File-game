@@ -5,19 +5,19 @@ public final class AutoEventTrade extends Auto {
     private static final String READY_PREFIX = "gomsk_ready;";
     private static final String WAIT_PREFIX = "gomsk_wait;";
 
-    private static String waitClone = "";
-    private static String waitToken = "";
-    private static int readyMap = -1;
-    private static int readyZone = -1;
-    private static int readyCount = 0;
-    private static int readyStacks = 0;
-    private static long readyAt = 0L;
-    private static boolean cloneSending = false;
+    private static volatile String waitClone = "";
+    private static volatile String waitToken = "";
+    private static volatile int readyMap = -1;
+    private static volatile int readyZone = -1;
+    private static volatile int readyCount = 0;
+    private static volatile int readyStacks = 0;
+    private static volatile long readyAt = 0L;
+    private static volatile boolean cloneSending = false;
     private static final long CLONE_TRADE_PAUSE_MS = 30000L;
-    private static Auto pausedCloneAuto = null;
-    private static long pausedCloneAutoUntil = 0L;
-    private static long lastClonePauseAt = 0L;
-    private static boolean pauseWatcherRunning = false;
+    private static volatile Auto pausedCloneAuto = null;
+    private static volatile long pausedCloneAutoUntil = 0L;
+    private static volatile long lastClonePauseAt = 0L;
+    private static volatile boolean pauseWatcherRunning = false;
 
     private int index = 0;
     private int retry = 0;
@@ -559,7 +559,12 @@ public final class AutoEventTrade extends Auto {
             if (LockGame.a(20000L)) {
                 for (int i = 0; i < items.length; ++i) {
                     if (items[i] != null) {
-                        Char.getMyChar().arrItemBag[items[i].indexUI] = null;
+                        Char me = Char.getMyChar();
+                        int index = items[i].indexUI;
+                        if (me != null && me.arrItemBag != null && index >= 0
+                                && index < me.arrItemBag.length && me.arrItemBag[index] == items[i]) {
+                            me.arrItemBag[index] = null;
+                        }
                     }
                 }
             }

@@ -7,13 +7,13 @@ public final class AutoBossScheduleManager {
     private static final long PENDING_TIMEOUT = 300000L;
     private static final int START_SECOND = 5;
 
-    private static long lastCheckAt = 0L;
-    private static int lastFourHourKey = -1;
-    private static int lastVDMQKey = -1;
-    private static int pendingEventType = -1;
-    private static int pendingKey = -1;
-    private static long pendingStartAt = 0L;
-    private static long pendingExpireAt = 0L;
+    private static volatile long lastCheckAt = 0L;
+    private static volatile int lastFourHourKey = -1;
+    private static volatile int lastVDMQKey = -1;
+    private static volatile int pendingEventType = -1;
+    private static volatile int pendingKey = -1;
+    private static volatile long pendingStartAt = 0L;
+    private static volatile long pendingExpireAt = 0L;
 
     private AutoBossScheduleManager() {
     }
@@ -30,7 +30,7 @@ public final class AutoBossScheduleManager {
                 return;
             }
 
-            if (isActive() || AutoHD9xManager.isRoundActive() || Code.auto instanceof AutoLDGT) {
+            if (isActive() || AutoHD9xManager.isRoundActive() || AutoLDGT.isRunning()) {
                 return;
             }
 
@@ -96,11 +96,22 @@ public final class AutoBossScheduleManager {
     }
 
     public static boolean isActive() {
-        return Code.auto instanceof AutoBossSchedule;
+        Auto current = Code.auto;
+        int guard = 0;
+        while (current != null && guard++ < 64) {
+            if (current instanceof AutoBossSchedule) {
+                return true;
+            }
+            if (current.instance == current) {
+                break;
+            }
+            current = current.instance;
+        }
+        return false;
     }
 
     private static void start(int eventType) {
-        if (AutoHD9xManager.isRoundActive() || Code.auto instanceof AutoLDGT) {
+        if (AutoHD9xManager.isRoundActive() || AutoLDGT.isRunning()) {
             GameScr.chatPopup("Auto boss: đang có auto ưu tiên");
             return;
         }
@@ -146,7 +157,7 @@ public final class AutoBossScheduleManager {
             return true;
         }
 
-        if (AutoHD9xManager.isRoundActive() || Code.auto instanceof AutoLDGT) {
+        if (AutoHD9xManager.isRoundActive() || AutoLDGT.isRunning()) {
             if (now < pendingExpireAt) {
                 return true;
             }

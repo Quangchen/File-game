@@ -1,7 +1,7 @@
 
 public final class AutoNpc extends Auto {
 
-    public static boolean running = false;
+    public static volatile boolean running = false;
 
     private final int mapID;
     private final int khuID;

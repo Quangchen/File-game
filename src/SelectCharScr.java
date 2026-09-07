@@ -154,7 +154,7 @@ public final class SelectCharScr extends mScreen implements IActionListener {
  
     public final void update() {
        TileMap.c();
-       System.gc();
+       NinjaUtil.requestGc();
        super.update();
  
        for(int var1 = 0; var1 < this.g.length; ++var1) {

@@ -10,9 +10,9 @@ import java.util.Vector;
 public final class Code implements Runnable {
 
     public static Code instance = new Code();
-    private static boolean aq = false;
+    private static volatile boolean aq = false;
     private static Thread ar;
-    public static Auto auto;
+    public static volatile Auto auto;
     private static AutoTanSat autoTanSat = new AutoTanSat();
     public static Stanima c = new Stanima();
     public static AutoUp autoUp = new AutoUp();
@@ -531,13 +531,48 @@ public final class Code implements Runnable {
     }
 
     public static void setAuto(Auto var0) {
+        if (var0 == null) {
+            return;
+        }
+
+        if (auto == var0) {
+            return;
+        }
+
+        Auto previous = null;
+        Auto current = auto;
+        int guard = 0;
+        while (current != null && guard++ < 64) {
+            if (current == var0) {
+                if (previous != null) {
+                    previous.instance = current.instance;
+                    current.instance = auto;
+                    auto = current;
+                }
+                return;
+            }
+            if (current.instance == current) {
+                current.instance = null;
+                break;
+            }
+            previous = current;
+            current = current.instance;
+        }
+
         var0.instance = auto;
         auto = var0;
     }
 
     public static void backToInstance() {
         LockGame.tatAuto();
-        auto = auto.instance;
+        if (auto == null) {
+            return;
+        }
+
+        Auto current = auto;
+        Auto previous = current.instance;
+        current.instance = null;
+        auto = previous == current ? null : previous;
     }
 
     public static boolean startGomDoNow() {
@@ -646,6 +681,13 @@ public final class Code implements Runnable {
         try {
             if (AutoDapDo.isRunning()) {
                 AutoDapDo.stop();
+            }
+        } catch (Exception e) {
+        }
+
+        try {
+            if (AutoLuckyCard.isRunning()) {
+                AutoLuckyCard.stop();
             }
         } catch (Exception e) {
         }
@@ -915,7 +957,6 @@ public final class Code implements Runnable {
                         AutoHalloween.updateSchedule();
                         AutoNguHanhHoa.update();
                         autoTTGT(var3);
-                        AutoTaskScheduler.update();
                         int var4 = Char.countNullSlot();
                         int var6;
                         int var11;
@@ -1708,6 +1749,8 @@ public final class Code implements Runnable {
             }
         } else if (auto instanceof As10) {
             return itemTemplate.type == 19;
+        } else if (AutoUpFullSupport.shouldBlockCrystalPickForUpgrade(itemTemplate)) {
+            return false;
         } else if (AutoUpFullSupport.canPickCrystalForUpgrade(itemTemplate)) {
             return true;
         } else if (itemTemplate.type == 19) {
@@ -1754,7 +1797,12 @@ public final class Code implements Runnable {
             return false;
         } else if (item == null) {
             return false;
+        } else if (item.template == null) {
+            return false;
         } else if (item.upgrade > 0) {
+            item.v = true;
+            return false;
+        } else if (AutoDapDo.shouldProtectDeleteItem(item)) {
             item.v = true;
             return false;
         } else {
@@ -2182,10 +2230,7 @@ public final class Code implements Runnable {
                                         startJoinClanDun();
                                         return true;
                                     } else if (var22.equals("lh")) {
-                                        if (value <= 0) {
-                                            value = 50;
-                                        }
-                                        (new Thread(new AutoLuckyCard(value))).start();
+                                        AutoLuckyCard.start(value);
                                         GameCanvas.setMaxTextLenght();
                                         return true;
                                     } else if (var22.equals("adv")) {
@@ -2295,7 +2340,7 @@ public final class Code implements Runnable {
                                     } else if (var22.equals("menumua") || var22.equals("menumuashop")) {
                                         new FormAutoBuyShop().select();
                                         return true;
-                                    } else if (var22.equals("setuplv") || var22.equals("menuuplv") || var22.equals("menuupfull")) {
+                                    } else if (var22.equals("setuplv") || var22.equals("menuuplv") || var22.equals("menuupfull") || var22.equals("setuplevelvip") || var22.equals("menuuplevelvip")) {
                                         new FormAutoUpFull().select();
                                         return true;
                                     } else if (var22.equals("setcc") || var22.equals("menucauca")) {
@@ -2346,6 +2391,12 @@ public final class Code implements Runnable {
                                         return true;
                                     } else if (var22.equals("menudd")) {
                                         new FormAutoDapDo().select();
+                                        return true;
+                                    } else if (var22.equals("menulh") || var22.equals("setlh")) {
+                                        new FormAutoLuckyCard().select();
+                                        return true;
+                                    } else if (var22.equals("stoplh") || var22.equals("dunglh")) {
+                                        AutoLuckyCard.stop();
                                         return true;
                                     } else if (var22.equals("dd") || var22.equals("dapdo")) {
                                         AutoDapDo.toggle();
@@ -2451,7 +2502,7 @@ public final class Code implements Runnable {
                                         return true;
                                     } else if (var22.equals("uplv")) {
                                         return AutoUpLevel.start(value);
-                                    } else if (var22.equals("uplvfull") || var22.equals("upfull")) {
+                                    } else if (var22.equals("uplvfull") || var22.equals("upfull") || var22.equals("uplevelvip") || var22.equals("upvip")) {
                                         return AutoUpLevel.startFull(value);
                                     } else if (var22.equals("uplvpt")) {
                                         return AutoUpLevel.start(value, true);

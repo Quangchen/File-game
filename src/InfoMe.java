@@ -11,7 +11,7 @@ public final class InfoMe {
     private static int h = 20;
  
     public static void a(mGraphics var0) {
-       if (FormToiUu.isHideBottomNotice()) {
+       if (shouldHideBottomLine()) {
           return;
        }
        int var1 = g;
@@ -99,6 +99,9 @@ public final class InfoMe {
     }
  
     public static void a(String var0) {
+       if (shouldHideBottomLine()) {
+          return;
+       }
        if (!b(var0)) {
           if (GameCanvas.width == 128) {
              g = 1;
@@ -158,6 +161,9 @@ public final class InfoMe {
     }
  
     public static void a(String var0, int var1, mFont var2) {
+       if (shouldHideBottomLine()) {
+          return;
+       }
        if (!b(var0)) {
           if (GameCanvas.width == 128) {
              g = 1;
@@ -174,6 +180,10 @@ public final class InfoMe {
  
     public static boolean b() {
        return c == 5 && a.size() == 0;
+    }
+
+    private static boolean shouldHideBottomLine() {
+       return FormToiUu.isHideBottomNotice() || AutoLuckyCard.isRunning() || AutoDapDo.isHidingLuckyCardUi();
     }
  }
  

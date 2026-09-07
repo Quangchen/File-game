@@ -52,7 +52,7 @@ public final class AutoViThu extends Auto {
     private static int lastScheduleKey = -1;
     private static long lastScheduleCheck = 0L;
     private static String status = "Tat";
-    private static boolean openEggRunning = false;
+    private static volatile boolean openEggRunning = false;
     private static String openEggStatus = "Tat";
     private static int openEggUsed = 0;
     private static int openEggKept = 0;

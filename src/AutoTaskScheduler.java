@@ -57,7 +57,7 @@ public final class AutoTaskScheduler {
                 GameScr.chatPopup("Den gio Danh Vong");
             }
 
-            if (AutoBossScheduleManager.isActive() || AutoHD9xManager.isRoundActive() || Code.auto instanceof AutoLDGT) {
+            if (AutoBossScheduleManager.isActive() || AutoHD9xManager.isRoundActive() || AutoLDGT.isRunning()) {
                 return;
             }
 

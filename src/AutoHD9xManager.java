@@ -11,25 +11,25 @@ public final class AutoHD9xManager {
     private static final int[] MEMBER_ORDER = new int[]{3, 4, 1, 2, 0};
     private static final int[] MEMBER_MAP = new int[]{159, 159, 158, 158, 157};
 
-    private static boolean active = false;
-    private static boolean leaderRound = false;
-    private static boolean closed = false;
-    private static String roundId = "";
-    private static String currentLeader = "";
-    private static int state = STATE_IDLE;
-    private static long stateAt = 0L;
-    private static long lastInviteAt = 0L;
-    private static long lastPrepareAt = 0L;
-    private static long lastReadyAt = 0L;
-    private static long allMembersInZoneAt = 0L;
-    private static int lastScheduleDayKey = -1;
-    private static long lastScheduleCheckAt = 0L;
+    private static volatile boolean active = false;
+    private static volatile boolean leaderRound = false;
+    private static volatile boolean closed = false;
+    private static volatile String roundId = "";
+    private static volatile String currentLeader = "";
+    private static volatile int state = STATE_IDLE;
+    private static volatile long stateAt = 0L;
+    private static volatile long lastInviteAt = 0L;
+    private static volatile long lastPrepareAt = 0L;
+    private static volatile long lastReadyAt = 0L;
+    private static volatile long allMembersInZoneAt = 0L;
+    private static volatile int lastScheduleDayKey = -1;
+    private static volatile long lastScheduleCheckAt = 0L;
     private static final MyVector readyMembers = new MyVector();
-    private static boolean leaderReached = false;
-    private static int memberOrderIndex = 0;
-    private static String waitingMember = "";
-    private static int waitingMap = -1;
-    private static boolean waitingMemberReached = false;
+    private static volatile boolean leaderReached = false;
+    private static volatile int memberOrderIndex = 0;
+    private static volatile String waitingMember = "";
+    private static volatile int waitingMap = -1;
+    private static volatile boolean waitingMemberReached = false;
 
     private AutoHD9xManager() {
     }

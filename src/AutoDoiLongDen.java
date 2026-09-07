@@ -16,15 +16,13 @@ public final class AutoDoiLongDen implements Runnable {
     private static final int FASHION_LANTERN_MIN = 1048;
     private static final int FASHION_LANTERN_MAX = 1055;
     private static final int OPTION_LANTERN_MARKER = 64;
-    private static final int OPTION_NOT_FOUND = -2147483648;
-    private static final int OPTION_MARKER_MATCH = 2147483647;
     private static final int REQUIRED_EMPTY_SLOT = 1;
     private static final int PRODUCER_RESERVE_EXTRA_SLOT = 1;
     private static final long BOX_TIMEOUT = 8000L;
     private static final long RESULT_TIMEOUT = 9000L;
     private static final long OPTION_TIMEOUT = 6000L;
 
-    public static boolean enabled = false;
+    public static volatile boolean enabled = false;
     public static boolean huntOption = false;
     public static boolean autoDeleteFail = true;
     public static boolean requireAll = true;
@@ -34,12 +32,13 @@ public final class AutoDoiLongDen implements Runnable {
     public static int currencyMode = CURRENCY_XU;
     public static String menuPathXu = "2";
     public static String menuPathLuong = "2,1";
-    public static String ruleText = "87>=4500";
+    public static String ruleText = "87";
+    public static int exchangeLimit = 0;
 
     private static boolean loaded = false;
-    private static boolean running = false;
-    private static boolean busy = false;
-    private static boolean producerPaused = false;
+    private static volatile boolean running = false;
+    private static volatile boolean busy = false;
+    private static volatile boolean producerPaused = false;
     private static String status = "Tắt";
     private static int exchanged = 0;
     private static int kept = 0;
@@ -72,6 +71,9 @@ public final class AutoDoiLongDen implements Runnable {
 
         running = true;
         enabled = true;
+        exchanged = 0;
+        kept = 0;
+        deleted = 0;
         (new Thread(new AutoDoiLongDen())).start();
         if (showPopup) {
             GameScr.chatPopup("Bật auto đổi lồng đèn");
@@ -128,7 +130,7 @@ public final class AutoDoiLongDen implements Runnable {
 
     public static String getStatusText() {
         load();
-        return (running ? status : "Tắt") + " | đổi:" + exchanged + " giữ:" + kept + " xóa:" + deleted;
+        return (running ? status : "Tắt") + " | đổi:" + exchanged + getExchangeLimitText() + " giữ:" + kept + " xóa:" + deleted;
     }
 
     public static String getAutoText() {
@@ -137,13 +139,17 @@ public final class AutoDoiLongDen implements Runnable {
             return "";
         }
 
-        return "Đổi LĐ: " + (running ? status : "chờ") + " đổi:" + exchanged + " giữ:" + kept + " xóa:" + deleted;
+        return "Đổi LĐ: " + (running ? status : "chờ") + " đổi:" + exchanged + getExchangeLimitText() + " giữ:" + kept + " xóa:" + deleted;
     }
 
     public final void run() {
         load();
         while (running && enabled && GameCanvas.mScreen instanceof GameScr) {
             try {
+                if (isExchangeLimitReached()) {
+                    stopByLimit();
+                    break;
+                }
                 if (!canWorkNow()) {
                     shouldPauseProducers();
                     if (producerPaused) {
@@ -155,6 +161,10 @@ public final class AutoDoiLongDen implements Runnable {
                 }
 
                 doOneExchange();
+                if (isExchangeLimitReached()) {
+                    stopByLimit();
+                    break;
+                }
                 shouldPauseProducers();
                 if (producerPaused) {
                     sleepMs(100L);
@@ -172,7 +182,9 @@ public final class AutoDoiLongDen implements Runnable {
         running = false;
         busy = false;
         producerPaused = false;
-        status = "Tắt";
+        if (!isExchangeLimitReached()) {
+            status = "Tắt";
+        }
     }
 
     private static boolean canWorkNow() {
@@ -184,6 +196,11 @@ public final class AutoDoiLongDen implements Runnable {
 
         if (!me.isHuman) {
             status = "Chỉ đổi ở chủ thân";
+            return false;
+        }
+
+        if (isExchangeLimitReached()) {
+            stopByLimit();
             return false;
         }
 
@@ -258,6 +275,10 @@ public final class AutoDoiLongDen implements Runnable {
 
     private static boolean shouldReserveBag(boolean updateStatus) {
         if (!enabled || !running || !(GameCanvas.mScreen instanceof GameScr)) {
+            return false;
+        }
+
+        if (isExchangeLimitReached()) {
             return false;
         }
 
@@ -523,13 +544,7 @@ public final class AutoDoiLongDen implements Runnable {
                 continue;
             }
             ++valid;
-            boolean passed;
-            if (rule.exactParam) {
-                passed = hasOptionParam(item, rule.optionId, rule.minParam);
-            } else {
-                int param = getRuleOptionParam(item, rule.optionId);
-                passed = rule.onlyExists ? param != OPTION_NOT_FOUND : param >= rule.minParam;
-            }
+            boolean passed = hasLanternMarkerOption(item, getRuleMarkerParam(rule));
             if (passed) {
                 ++ok;
                 if (!requireAll) {
@@ -543,13 +558,8 @@ public final class AutoDoiLongDen implements Runnable {
         return valid > 0 && ok == valid;
     }
 
-    private static int getRuleOptionParam(Item item, int optionId) {
-        int direct = getOptionParam(item, optionId);
-        if (direct != OPTION_NOT_FOUND) {
-            return direct;
-        }
-
-        return hasLanternMarkerOption(item, optionId) ? OPTION_MARKER_MATCH : OPTION_NOT_FOUND;
+    private static int getRuleMarkerParam(Rule rule) {
+        return rule.exactParam && rule.optionId == OPTION_LANTERN_MARKER ? rule.minParam : rule.optionId;
     }
 
     private static Rule parseRule(String text) {
@@ -578,35 +588,6 @@ public final class AutoDoiLongDen implements Runnable {
         } catch (Exception e) {
             return null;
         }
-    }
-
-    private static int getOptionParam(Item item, int optionId) {
-        if (item == null || item.options == null) {
-            return OPTION_NOT_FOUND;
-        }
-
-        int best = OPTION_NOT_FOUND;
-        for (int i = 0; i < item.options.size(); ++i) {
-            ItemOption option = (ItemOption)item.options.elementAt(i);
-            if (option != null && option.optionTemplate != null && option.optionTemplate.id == optionId && option.param > best) {
-                best = option.param;
-            }
-        }
-        return best;
-    }
-
-    private static boolean hasOptionParam(Item item, int optionId, int param) {
-        if (item == null || item.options == null) {
-            return false;
-        }
-
-        for (int i = 0; i < item.options.size(); ++i) {
-            ItemOption option = (ItemOption)item.options.elementAt(i);
-            if (option != null && option.optionTemplate != null && option.optionTemplate.id == optionId && option.param == param) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private static boolean hasLanternMarkerOption(Item item, int optionId) {
@@ -712,6 +693,24 @@ public final class AutoDoiLongDen implements Runnable {
         return minEmptySlot < REQUIRED_EMPTY_SLOT ? REQUIRED_EMPTY_SLOT : minEmptySlot;
     }
 
+    private static String getExchangeLimitText() {
+        return exchangeLimit > 0 ? "/" + exchangeLimit : "";
+    }
+
+    private static boolean isExchangeLimitReached() {
+        return exchangeLimit > 0 && exchanged >= exchangeLimit;
+    }
+
+    private static void stopByLimit() {
+        running = false;
+        enabled = false;
+        busy = false;
+        producerPaused = false;
+        save();
+        status = "Đạt giới hạn đổi " + exchangeLimit;
+        GameScr.chatPopup(status);
+    }
+
     private static void waitMove(int x, int y, long timeout) {
         long start = System.currentTimeMillis();
         while (running && System.currentTimeMillis() - start < timeout) {
@@ -759,6 +758,7 @@ public final class AutoDoiLongDen implements Runnable {
             dataout.writeInt(currencyMode);
             dataout.writeUTF(menuPathXu == null ? "" : menuPathXu);
             dataout.writeUTF(menuPathLuong == null ? "" : menuPathLuong);
+            dataout.writeInt(exchangeLimit);
             dataout.flush();
             RMS.writeRecord(STORE_NAME, byteout.toByteArray());
             dataout.close();
@@ -791,6 +791,9 @@ public final class AutoDoiLongDen implements Runnable {
                     menuPathXu = datain.readUTF();
                     menuPathLuong = datain.readUTF();
                 }
+                if (datain.available() > 0) {
+                    exchangeLimit = datain.readInt();
+                }
                 datain.close();
                 bytein.close();
             }
@@ -822,6 +825,9 @@ public final class AutoDoiLongDen implements Runnable {
         }
         if (menuPathLuong == null || menuPathLuong.trim().length() == 0) {
             menuPathLuong = "2,1";
+        }
+        if (exchangeLimit < 0) {
+            exchangeLimit = 0;
         }
     }
 

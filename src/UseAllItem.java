@@ -4,12 +4,14 @@ final class UseAllItem implements Runnable {
     private static final int DEFAULT_DELAY_MS = 100;
     private static final int MIN_DELAY_MS = 10;
     private static final int MAX_DELAY_MS = 10000;
-    private static boolean running;
+    private static volatile boolean running;
     private static int delayMs = -1;
     private Item item;
+    private final int itemId;
 
     private UseAllItem(Item item) {
         this.item = item;
+        this.itemId = item.template.id;
     }
 
     public static boolean isRunning() {
@@ -43,7 +45,7 @@ final class UseAllItem implements Runnable {
     }
 
     public static void start(Item item) {
-        if (item == null) {
+        if (item == null || item.template == null) {
             return;
         }
 
@@ -103,6 +105,10 @@ final class UseAllItem implements Runnable {
 
             while (running && index > 0 && GameCanvas.mScreen instanceof GameScr) {
                 waitDoiLongDen();
+                this.item = findCurrentItem();
+                if (this.item == null) {
+                    break;
+                }
                 if (Char.countNullSlot() < 3) {
                     GameScr.chatPopup("Hành trang gần đầy, quét 10s...");
                     if (!waitForFreeSlot(10000L)) {
@@ -110,7 +116,7 @@ final class UseAllItem implements Runnable {
                         break;
                     }
 
-                    this.item = Char.getMyChar().arrItemBag[this.item.indexUI];
+                    this.item = findCurrentItem();
                     if (this.item != null) {
                         index = this.item.quantity;
                     } else {
@@ -128,7 +134,7 @@ final class UseAllItem implements Runnable {
                     Service.getInstance().viewInfo(Char.getMyChar().charName);
                     Thread.sleep(500L);
                     waitDoiLongDen();
-                    this.item = Char.getMyChar().arrItemBag[this.item.indexUI];
+                    this.item = findCurrentItem();
                     if (this.item != null) {
                         index = this.item.quantity;
                     } else {
@@ -143,8 +149,24 @@ final class UseAllItem implements Runnable {
         GameScr.fg = false;
     }
 
+    private Item findCurrentItem() {
+        Char me = Char.getMyChar();
+        if (me == null || me.arrItemBag == null) {
+            return null;
+        }
+
+        for (int i = 0; i < me.arrItemBag.length; ++i) {
+            Item current = me.arrItemBag[i];
+            if (current != null && current.template != null && current.template.id == this.itemId) {
+                return current;
+            }
+        }
+        return null;
+    }
+
     private static void waitDoiLongDen() throws Exception {
-        while (running && (AutoDoiLongDen.shouldPauseProducers() || AutoRuocDen.isBusy()) && GameCanvas.mScreen instanceof GameScr) {
+        while (running && (AutoDoiLongDen.shouldPauseProducers() || AutoRuocDen.isBusy() || AutoLuckyCard.isRunning()
+                || AutoDapDo.isLuckyCardBusy()) && GameCanvas.mScreen instanceof GameScr) {
             Thread.sleep(100L);
         }
     }

@@ -405,7 +405,7 @@ public final class Controller implements IController {
                     GameCanvas.e = true;
                     GameScr.a();
                     TileMap.vGo.removeAllElements();
-                    System.gc();
+                    NinjaUtil.requestGc();
                     TileMap.mapID = (short) ms.reader().readUnsignedByte();
                     TileMap.e = ms.reader().readByte();
                     TileMap.bgID = ms.reader().readByte();
@@ -3698,6 +3698,7 @@ public final class Controller implements IController {
                         Char.clan.alert = ms.reader().readUTF();
                         Char.clan.use_card = ms.reader().readInt();
                         Char.clan.openDun = ms.reader().readByte();
+                        AutoLDGT.onClanInfoUpdated();
                         return;
                     case -112:
                         GameScr.vClan.removeAllElements();
@@ -3730,6 +3731,7 @@ public final class Controller implements IController {
                         }
 
                         GameScr.getInstance().ao();
+                        AutoLDGT.onClanItemUpdated();
                         byte var5 = ms.reader().readByte();
 
                         for (var3 = 0; var3 < var5; ++var3) {
@@ -3764,7 +3766,7 @@ public final class Controller implements IController {
                             GameCanvas.e = true;
                             TileMap.maps = null;
                             TileMap.types = null;
-                            System.gc();
+                            NinjaUtil.requestGc();
                             TileMap.a(TileMap.mapID, ms.reader());
                             TileMap.i();
                             d(this.b);

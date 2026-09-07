@@ -1,11 +1,8 @@
 
 // Source code is decompiled from instance .class file using FernFlower decompiler.
-import java.util.Calendar;
-
 public final class AutoTanSat extends Auto {
 
     public int modID;
-    public static long b;
 
     public AutoTanSat() {
     }
@@ -24,43 +21,6 @@ public final class AutoTanSat extends Auto {
                 Auto.autoRemap(true);
             }
         } else {
-            Calendar curCal;
-            int currentHour = (curCal = Res.getCurrentTime()).get(11);
-            int currentMinute = curCal.get(12);
-
-            if (FormAutoTask.batNvhn && currentHour == FormAutoTask.gioNvhn && currentMinute == FormAutoTask.phutNvhn && System.currentTimeMillis() - b >= 5000L) {
-                if (Auto.goTruongIfNeeded()) {
-                    return;
-                }
-                Auto.sleep(2000L);
-                GameScr.PickNpc(25, 1, 0);
-                for(int i = 60; i >= 0; i--){
-                    GameScr.chatPopup("Bắt đầu làm nhiệm vụ hàng ngày" + " (" + i + " giây)");
-                    Auto.sleep(1000L);
-                }
-                Code.instance.startAutoNVHN();
-                b = System.currentTimeMillis();
-                return;
-            }
-
-            if (SettingNVDV.tickHenGioLamDV == 0 && currentHour == SettingNVDV.gioADV && currentMinute == SettingNVDV.phutADV && System.currentTimeMillis() - b >= 5000L) {
-                if (Auto.goTruongIfNeeded()) {
-                    return;
-                }
-                Auto.sleep(2000L);
-                GameScr.PickNpc(25, 1, 0);
-                GameScr.chatPopup("Nhận nhiệm vụ hàng ngày đã, đi làm nhiệm vụ cho nhanh");
-                Auto.sleep(2000L);
-                GameScr.goNPC(2);
-                for(int i = 60; i >= 0; i--){
-                    GameScr.chatPopup("Bắt đầu làm nhiệm vụ danh vọng" + " (" + i + " giây)");
-                    Auto.sleep(1000L);
-                }
-                Code.instance.startAutoDV();
-                b = System.currentTimeMillis();
-                return;
-            }
-
             if (!Auto.q && Char.getMyChar().isHuman) {
                 this.l();
                 return;

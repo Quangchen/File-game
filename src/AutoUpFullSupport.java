@@ -18,6 +18,13 @@ public final class AutoUpFullSupport {
     private static final int SHOP_GIAY_NU = 29;
     private static final int SHOP_STORE = 14;
     private static final int ITEM_NAM_LINH_CHI = 248;
+    private static final int ITEM_TUI_VAI_1 = 215;
+    private static final int ITEM_TUI_VAI_2 = 229;
+    private static final int ITEM_TUI_VAI_3 = 283;
+    private static final int BAG_SIZE_AFTER_TUI_1 = 36;
+    private static final int BAG_SIZE_AFTER_TUI_2 = 42;
+    private static final int BAG_SIZE_AFTER_TUI_3 = 54;
+    private static final int BAG_3_FLIP_BATCH = 50;
     private static final int EFFECT_NAM_LINH_CHI = 22;
     private static final int EXCHANGE_YEN_MAP = 1;
     private static final int EXCHANGE_YEN_NPC = 24;
@@ -26,6 +33,10 @@ public final class AutoUpFullSupport {
     private static final long NAM_LINH_CHI_USE_DELAY = 3000L;
     private static final long NAM_LINH_CHI_BUY_DELAY = 30000L;
     private static final long NAM_LINH_CHI_FAIL_DELAY = 60000L;
+    private static final int CRYSTAL_PICK_EMPTY_RESERVE = 12;
+    private static final long CRYSTAL_COMPACT_DELAY = 3000L;
+    private static final long BAG_ACTION_DELAY = 3000L;
+    private static final long PROTECT_CLEAN_DELAY = 5000L;
     private static final int[] UPGRADE_WEAPON_SLOTS = new int[]{1};
     private static final int[] UPGRADE_ADORN_SLOTS = new int[]{3, 5, 7, 9};
     private static final int[] UPGRADE_CLOTHE_SLOTS = new int[]{0, 2, 4, 6, 8};
@@ -46,6 +57,9 @@ public final class AutoUpFullSupport {
     private static long lastNamLinhChiBuyAt = 0L;
     private static long lastNamLinhChiFailAt = 0L;
     private static long lastExchangeYenAt = 0L;
+    private static long lastCrystalCompactAt = 0L;
+    private static long lastBagActionAt = 0L;
+    private static long lastProtectCleanAt = 0L;
     private static boolean exchangeYenTried = false;
 
     private AutoUpFullSupport() {
@@ -60,11 +74,24 @@ public final class AutoUpFullSupport {
                 return false;
             }
             if (AutoDapDo.isRunning()) {
+                if (FormAutoUpFull.UpgradeGear && FormAutoUpFull.AutoFlipCrystal) {
+                    compactCrystalsForUpgrade(false);
+                }
                 statusText = AutoDapDo.getAutoText();
+                return true;
+            }
+            if (AutoLuckyCard.isRunning()) {
+                statusText = AutoLuckyCard.getAutoText();
                 return true;
             }
 
             long now = System.currentTimeMillis();
+            if (cleanObsoleteProtection(me, now)) {
+                return true;
+            }
+            if (FormAutoUpFull.AutoExpandBag && handleExpandBag(me, now)) {
+                return true;
+            }
             if (FormAutoUpFull.UseNamLinhChiX2 && handleNamLinhChi(me, now)) {
                 return true;
             }
@@ -90,6 +117,9 @@ public final class AutoUpFullSupport {
             if ((FormAutoUpFull.BuyGear || FormAutoUpFull.UpgradeGear) && FormAutoUpFull.getTargetTierForLevel(me.cLevel) > 0) {
                 if (FormAutoUpFull.UpgradeGear) {
                     ensureCrystalPickForUpgrade();
+                    if (compactCrystalsForUpgrade(false)) {
+                        return true;
+                    }
                 } else {
                     restoreCrystalPickForUpgrade();
                 }
@@ -135,9 +165,174 @@ public final class AutoUpFullSupport {
         lastNamLinhChiBuyAt = 0L;
         lastNamLinhChiFailAt = 0L;
         lastExchangeYenAt = 0L;
+        lastCrystalCompactAt = 0L;
+        lastBagActionAt = 0L;
+        lastProtectCleanAt = 0L;
         exchangeYenTried = false;
         statusText = "";
         restoreCrystalPickForUpgrade();
+    }
+
+    static boolean shouldProtectExpandBagItem(Item item) {
+        if (!FormAutoUpFull.AutoExpandBag || !AutoUpLevel.isRunningFullMode() || item == null || item.template == null) {
+            return false;
+        }
+        Char me = Char.getMyChar();
+        if (me == null || me.arrItemBag == null) {
+            return false;
+        }
+        int size = me.arrItemBag.length;
+        int id = item.template.id;
+        return id == ITEM_TUI_VAI_1 && size < BAG_SIZE_AFTER_TUI_1
+                || id == ITEM_TUI_VAI_2 && size < BAG_SIZE_AFTER_TUI_2
+                || id == ITEM_TUI_VAI_3 && size < BAG_SIZE_AFTER_TUI_3;
+    }
+
+    private static boolean handleExpandBag(Char me, long now) {
+        if (me == null || me.arrItemBag == null || me.arrItemBag.length >= BAG_SIZE_AFTER_TUI_3
+                || now - lastBagActionAt < BAG_ACTION_DELAY) {
+            return false;
+        }
+
+        int bagSize = me.arrItemBag.length;
+        int itemId = bagSize < BAG_SIZE_AFTER_TUI_1 ? ITEM_TUI_VAI_1
+                : bagSize < BAG_SIZE_AFTER_TUI_2 ? ITEM_TUI_VAI_2 : ITEM_TUI_VAI_3;
+        Item bagItem = findBagItem(me, itemId);
+        lastBagActionAt = now;
+        if (bagItem != null) {
+            statusText = "Dung tui vai " + itemId;
+            GameScr.chatPopup("UpLevelVIP: dung tui vai " + itemId);
+            Service.getInstance().useItem(bagItem.indexUI);
+            Auto.sleep(1000L);
+            return true;
+        }
+
+        if (Char.countNullSlot() <= 0) {
+            statusText = "Can 1 o trong de lay tui " + itemId;
+            return false;
+        }
+
+        if (itemId == ITEM_TUI_VAI_3) {
+            statusText = "Lat hinh san tui vai 3";
+            if (!AutoLuckyCard.startForTarget(ITEM_TUI_VAI_3, BAG_3_FLIP_BATCH)) {
+                statusText = "Chua the lat tui vai 3";
+                return false;
+            }
+            return true;
+        }
+
+        statusText = "Mua tui vai " + itemId + " tai Goosho";
+        GameScr.chatPopup("UpLevelVIP: mua tui vai " + itemId + " tai Goosho");
+        if (!AutoBuyShop.buyNow(itemId, SHOP_STORE, 1)) {
+            statusText = "Mua tui vai " + itemId + " that bai";
+        }
+        return true;
+    }
+
+    private static Item findBagItem(Char me, int itemId) {
+        if (me == null || me.arrItemBag == null) {
+            return null;
+        }
+        for (int i = 0; i < me.arrItemBag.length; ++i) {
+            Item item = me.arrItemBag[i];
+            if (item != null && item.template != null && item.template.id == itemId
+                    && item.typeUI == 3 && item.indexUI == i) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+    private static boolean cleanObsoleteProtection(Char me, long now) {
+        if (!FormAutoUpFull.UpgradeGear || !FormAutoUpFull.AutoFlipCrystal || !FormAutoUpFull.UseProtectUpgrade
+                || me == null || me.arrItemBag == null || DeleteItem.isBusy()
+                || now - lastProtectCleanAt < PROTECT_CLEAN_DELAY) {
+            return false;
+        }
+        int tier = FormAutoUpFull.getTargetTierForLevel(me.cLevel);
+        int target = FormAutoUpFull.getTargetUpgradeForTier(tier);
+        if (tier <= 0 || target <= 0) {
+            return false;
+        }
+
+        int[] ids = new int[]{242, 284, 285, 475};
+        for (int i = 0; i < ids.length; ++i) {
+            int id = ids[i];
+            if (!isProtectionManagedAtTarget(id, target) || isProtectionStillNeeded(me, id, tier, target)) {
+                continue;
+            }
+            Item item = findBagItem(me, id);
+            if (item == null) {
+                continue;
+            }
+            lastProtectCleanAt = now;
+            deleteObsoleteProtection(me, item);
+            return true;
+        }
+        return false;
+    }
+
+    private static boolean isProtectionManagedAtTarget(int itemId, int target) {
+        if (itemId == 242) {
+            return target > 7;
+        }
+        if (itemId == 284) {
+            return target > 10;
+        }
+        if (itemId == 285) {
+            return target > 13;
+        }
+        return itemId == 475 && target > 15;
+    }
+
+    private static boolean isProtectionStillNeeded(Char me, int protectId, int tier, int target) {
+        int[] slots = FormAutoUpFull.getSelectedBodyTypes();
+        boolean hasEligibleGear = false;
+        for (int i = 0; i < slots.length; ++i) {
+            int slot = slots[i];
+            int requiredLevel = getRequiredLevelForSlot(slot, tier);
+            if (requiredLevel <= 0 || requiredLevel > me.cLevel) {
+                continue;
+            }
+            hasEligibleGear = true;
+            Item item = slot >= 0 && slot < me.arrItemBody.length ? me.arrItemBody[slot] : null;
+            if (!isGearOkForSlot(item, me, slot, tier, false)) {
+                return true;
+            }
+            int end = target;
+            int max = item.q();
+            if (end > max) {
+                end = max;
+            }
+            for (int upgrade = item.upgrade; upgrade < end; ++upgrade) {
+                if (getProtectIdForUpgrade(upgrade) == protectId) {
+                    return true;
+                }
+            }
+        }
+        return !hasEligibleGear;
+    }
+
+    private static void deleteObsoleteProtection(Char me, Item item) {
+        int index = item.indexUI;
+        int id = item.template.id;
+        int quantity = item.quantity > 0 ? item.quantity : 1;
+        statusText = "Xoa bao hiem du " + id;
+        GameScr.chatPopup("UpLevelVIP: xoa bao hiem du " + id + " x" + quantity);
+        Service.getInstance().saleItem1(index, quantity);
+        long start = System.currentTimeMillis();
+        while (System.currentTimeMillis() - start < 5000L) {
+            if (me.arrItemBag == null || index < 0 || index >= me.arrItemBag.length) {
+                return;
+            }
+            Item current = me.arrItemBag[index];
+            if (current == null || current != item || current.template == null || current.template.id != id
+                    || (current.quantity > 0 ? current.quantity : 1) < quantity) {
+                return;
+            }
+            Auto.sleep(50L);
+        }
+        Service.getInstance().requestItem(3);
     }
 
     private static boolean handleNamLinhChi(Char me, long now) {
@@ -158,7 +353,7 @@ public final class AutoUpFullSupport {
                 }
                 lastNamLinhChiUseAt = now;
                 statusText = "Dung Nam linh chi x2";
-                GameScr.chatPopup("Auto Up Tong: dung Nam linh chi x2");
+                GameScr.chatPopup("UpLevelVIP: dung Nam linh chi x2");
                 Service.getInstance().useItem(item.indexUI);
                 Auto.sleep(1000L);
                 return true;
@@ -168,7 +363,7 @@ public final class AutoUpFullSupport {
                 if (now - lastNamLinhChiFailAt >= NAM_LINH_CHI_FAIL_DELAY) {
                     lastNamLinhChiFailAt = now;
                     statusText = "Nam linh chi dang stack >1";
-                    GameScr.chatPopup("Auto Up Tong: 248 dang stack >1, khong tu dung de tranh mat ca stack");
+                    GameScr.chatPopup("UpLevelVIP: 248 dang stack >1, khong tu dung de tranh mat ca stack");
                 }
                 return false;
             }
@@ -179,13 +374,13 @@ public final class AutoUpFullSupport {
             if (Char.countNullSlot() <= 0) {
                 lastNamLinhChiFailAt = now;
                 statusText = "Full hanh trang, khong mua 248";
-                GameScr.chatPopup("Auto Up Tong: full hanh trang, khong mua 248");
+                GameScr.chatPopup("UpLevelVIP: full hanh trang, khong mua 248");
                 return false;
             }
 
             lastNamLinhChiBuyAt = now;
             statusText = "Mua Nam linh chi 248";
-            GameScr.chatPopup("Auto Up Tong: mua Nam linh chi 248");
+            GameScr.chatPopup("UpLevelVIP: mua Nam linh chi 248");
             if (!AutoBuyShop.buyNow(ITEM_NAM_LINH_CHI, SHOP_STORE, 1)) {
                 lastNamLinhChiFailAt = now;
                 statusText = "Mua Nam linh chi that bai";
@@ -264,10 +459,165 @@ public final class AutoUpFullSupport {
     }
 
     public static boolean canPickCrystalForUpgrade(ItemTemplate itemTemplate) {
-        return crystalPickOverride && itemTemplate != null && itemTemplate.type == 26
+        return crystalPickOverride && Char.countNullSlot() > CRYSTAL_PICK_EMPTY_RESERVE
+                && itemTemplate != null && itemTemplate.type == 26
                 && Char.tickNhatDa && itemTemplate.id >= Char.ew - 1
                 && GameScr.crystals != null && itemTemplate.id >= 0 && itemTemplate.id < GameScr.crystals.length
                 && GameScr.crystals[itemTemplate.id] > 0;
+    }
+
+    public static boolean shouldBlockCrystalPickForUpgrade(ItemTemplate itemTemplate) {
+        return crystalPickOverride && Char.countNullSlot() <= CRYSTAL_PICK_EMPTY_RESERVE
+                && itemTemplate != null && itemTemplate.type == 26
+                && GameScr.crystals != null && itemTemplate.id >= 0 && itemTemplate.id < GameScr.crystals.length
+                && GameScr.crystals[itemTemplate.id] > 0;
+    }
+
+    public static int getCrystalPickEmptyReserve() {
+        return CRYSTAL_PICK_EMPTY_RESERVE;
+    }
+
+    public static boolean compactCrystalsForUpgrade(boolean urgent) {
+        try {
+            long now = System.currentTimeMillis();
+            if (!urgent && now - lastCrystalCompactAt < CRYSTAL_COMPACT_DELAY) {
+                return false;
+            }
+            if (GameCanvas.currentDialog != null || GameCanvas.menu != null && GameCanvas.menu.showMenu || TileMap.ag || GameScr.isSilentAutoBlockedByUi()) {
+                return false;
+            }
+            Char me = Char.getMyChar();
+            CrystalCompactPlan plan = selectCrystalCompactPlan(me);
+            if (plan == null || plan.count <= 1) {
+                return false;
+            }
+
+            lastCrystalCompactAt = now;
+            statusText = "Luyen da yen " + plan.itemId + " x" + plan.count;
+            GameScr.arrItemUpPeal = new Item[24];
+            for (int i = 0; i < plan.count; ++i) {
+                Item item = plan.items[i];
+                GameScr.arrItemUpPeal[i] = item;
+                me.arrItemBag[item.indexUI] = null;
+            }
+
+            Service.getInstance().crystalCollectLock1(GameScr.arrItemUpPeal);
+            LockGame.a();
+            restoreCrystalCompactItems(me);
+            restoreCrystalCompactMenu();
+            GameCanvas.setMaxTextLenght();
+            return true;
+        } catch (Exception e) {
+            restoreCrystalCompactItems(Char.getMyChar());
+            restoreCrystalCompactMenu();
+            return false;
+        }
+    }
+
+    private static CrystalCompactPlan selectCrystalCompactPlan(Char me) {
+        if (me == null || me.arrItemBag == null || GameScr.crystals == null || GameScr.coinUpCrystals == null || Char.countNullSlot() <= 0) {
+            return null;
+        }
+
+        CrystalCompactPlan best = null;
+        for (int id = 0; id < GameScr.crystals.length - 1; ++id) {
+            CrystalCompactPlan plan = selectCrystalCompactPlanByLock(me, id, true);
+            if (isBetterCrystalCompactPlan(plan, best)) {
+                best = plan;
+            }
+            plan = selectCrystalCompactPlanByLock(me, id, false);
+            if (isBetterCrystalCompactPlan(plan, best)) {
+                best = plan;
+            }
+        }
+        return best;
+    }
+
+    private static CrystalCompactPlan selectCrystalCompactPlanByLock(Char me, int itemId, boolean locked) {
+        int count = countCrystal(me, itemId, locked);
+        if (count < 4 || GameScr.crystals[itemId] <= 0) {
+            return null;
+        }
+
+        int useCount = 1;
+        int nextId = itemId;
+        long money = FormAutoUpFull.UseXuWhenLackYen ? (long) me.yen + (long) me.xu : (long) me.yen;
+        while (nextId < GameScr.crystals.length - 1 && useCount < 16 && (useCount << 2) <= count) {
+            int costIndex = nextId + 1;
+            if (costIndex < 0 || costIndex >= GameScr.coinUpCrystals.length || GameScr.coinUpCrystals[costIndex] > money) {
+                break;
+            }
+            useCount <<= 2;
+            ++nextId;
+        }
+
+        if (useCount < 4) {
+            return null;
+        }
+
+        CrystalCompactPlan plan = new CrystalCompactPlan();
+        plan.itemId = itemId;
+        plan.count = useCount;
+        plan.locked = locked;
+        plan.items = new Item[useCount];
+        int index = 0;
+        for (int i = 0; i < me.arrItemBag.length && index < useCount; ++i) {
+            Item item = me.arrItemBag[i];
+            if (isCompactCrystal(item, itemId, locked)) {
+                plan.items[index++] = item;
+            }
+        }
+        return index == useCount ? plan : null;
+    }
+
+    private static boolean isBetterCrystalCompactPlan(CrystalCompactPlan plan, CrystalCompactPlan best) {
+        if (plan == null) {
+            return false;
+        }
+        if (best == null) {
+            return true;
+        }
+        if (plan.count != best.count) {
+            return plan.count > best.count;
+        }
+        return plan.itemId < best.itemId;
+    }
+
+    private static int countCrystal(Char me, int itemId, boolean locked) {
+        int count = 0;
+        for (int i = 0; i < me.arrItemBag.length; ++i) {
+            if (isCompactCrystal(me.arrItemBag[i], itemId, locked)) {
+                ++count;
+            }
+        }
+        return count;
+    }
+
+    private static boolean isCompactCrystal(Item item, int itemId, boolean locked) {
+        return item != null && item.template != null && item.template.type == 26 && item.quantity == 1
+                && item.template.id == itemId && item.isLock == locked
+                && GameScr.crystals != null && itemId >= 0 && itemId < GameScr.crystals.length
+                && GameScr.crystals[itemId] > 0;
+    }
+
+    private static void restoreCrystalCompactItems(Char me) {
+        if (me == null || me.arrItemBag == null || GameScr.arrItemUpPeal == null) {
+            return;
+        }
+        for (int i = 0; i < GameScr.arrItemUpPeal.length; ++i) {
+            Item item = GameScr.arrItemUpPeal[i];
+            if (item != null && item.indexUI >= 0 && item.indexUI < me.arrItemBag.length && me.arrItemBag[item.indexUI] == null) {
+                me.arrItemBag[item.indexUI] = item;
+            }
+            GameScr.arrItemUpPeal[i] = null;
+        }
+    }
+
+    private static void restoreCrystalCompactMenu() {
+        try {
+            GameScr.getInstance().resetButton();
+        } catch (Exception e) {
+        }
     }
 
     private static void ensureCrystalPickForUpgrade() {
@@ -308,7 +658,7 @@ public final class AutoUpFullSupport {
 
         lastPotentialActionAt = now;
         statusText = "Cong tiem nang " + mResources.iz[stat] + " +" + add;
-        GameScr.chatPopup("Auto Up Tong: cong tiem nang " + mResources.iz[stat] + " +" + add);
+        GameScr.chatPopup("UpLevelVIP: cong tiem nang " + mResources.iz[stat] + " +" + add);
         Service.getInstance().e(stat, add);
         LockGame.w();
         Auto.sleep(700L);
@@ -335,7 +685,7 @@ public final class AutoUpFullSupport {
         lastSkillActionAt = now;
         selectAttackSkill(me, skill);
         statusText = "Cong ky nang " + skill.template.name + " +" + add;
-        GameScr.chatPopup("Auto Up Tong: cong ky nang " + skill.template.name + " +" + add);
+        GameScr.chatPopup("UpLevelVIP: cong ky nang " + skill.template.name + " +" + add);
         Service.getInstance().f(skill.template.id, add);
         Auto.sleep(700L);
         return true;
@@ -434,35 +784,47 @@ public final class AutoUpFullSupport {
             return false;
         }
 
-        int bookId = findMissingBookId(me);
-        if (bookId <= 0) {
+        int[] bookIds = findMissingBookIds(me);
+        if (bookIds.length == 0) {
             return false;
         }
 
         lastBookActionAt = now;
-        int index = Char.getIndexItemById(bookId);
-        if (index >= 0) {
-            statusText = "Hoc sach " + bookId;
-            GameScr.chatPopup("Auto Up Tong: hoc sach " + bookId);
-            Service.getInstance().useItem(index);
-            Auto.sleep(1200L);
+        int used = useBooksInBag(bookIds);
+        if (used > 0) {
+            statusText = "Hoc sach xong " + used + " quyen";
             return true;
         }
 
         if (Char.countNullSlot() <= 0) {
             statusText = "Full hanh trang, khong mua sach";
-            GameScr.chatPopup("Auto Up Tong: full hanh trang, khong mua sach");
+            GameScr.chatPopup("UpLevelVIP: full hanh trang, khong mua sach");
             return false;
         }
 
-        statusText = "Mua sach " + bookId;
-        GameScr.chatPopup("Auto Up Tong: mua sach " + bookId);
-        AutoBuyShop.buyNow(bookId, SHOP_BOOK, 1);
-        return true;
+        int bought = buyMissingBooksBatch(me, bookIds, Char.countNullSlot());
+        if (bought > 0) {
+            Auto.sleep(500L);
+            used = useBooksInBag(findMissingBookIds(Char.getMyChar()));
+            statusText = "Mua/hoc sach " + bought + "/" + used + " quyen";
+            return true;
+        }
+
+        return false;
     }
 
     private static int findMissingBookId(Char me) {
+        int[] ids = findMissingBookIds(me);
+        return ids.length == 0 ? -1 : ids[0];
+    }
+
+    private static int[] findMissingBookIds(Char me) {
+        if (me == null || me.nClass == null || me.nClass.skillTemplates == null) {
+            return new int[0];
+        }
         SkillTemplate[] templates = me.nClass.skillTemplates;
+        int[] temp = new int[templates.length];
+        int count = 0;
         for (int i = 0; i < templates.length; ++i) {
             SkillTemplate template = templates[i];
             if (template == null) {
@@ -479,10 +841,132 @@ public final class AutoUpFullSupport {
 
             int bookId = getBookId(template.id);
             if (bookId > 0) {
-                return bookId;
+                temp[count++] = bookId;
             }
         }
-        return -1;
+        return trimIntArray(temp, count);
+    }
+
+    private static int[] trimIntArray(int[] source, int count) {
+        if (source == null || count <= 0) {
+            return new int[0];
+        }
+        int[] result = new int[count];
+        System.arraycopy(source, 0, result, 0, count);
+        return result;
+    }
+
+    private static int useBooksInBag(int[] bookIds) {
+        if (bookIds == null || bookIds.length == 0) {
+            return 0;
+        }
+
+        int used = 0;
+        for (int i = 0; i < bookIds.length; ++i) {
+            int bookId = bookIds[i];
+            if (bookId <= 0) {
+                continue;
+            }
+            int index = Char.getIndexItemById(bookId);
+            if (index < 0) {
+                continue;
+            }
+
+            statusText = "Hoc sach " + bookId;
+            GameScr.chatPopup("UpLevelVIP: hoc sach " + bookId);
+            Service.getInstance().useItem(index);
+            ++used;
+            Auto.sleep(1200L);
+        }
+        return used;
+    }
+
+    private static int buyMissingBooksBatch(Char me, int[] bookIds, int maxBuy) {
+        if (me == null || bookIds == null || bookIds.length == 0 || maxBuy <= 0) {
+            return 0;
+        }
+
+        statusText = "Mua sach " + Math.min(bookIds.length, maxBuy) + " quyen";
+        GameScr.chatPopup("UpLevelVIP: mua sach 1 luot");
+        if (!AutoBuyShop.prepareShopForBuy(SHOP_BOOK)) {
+            statusText = "Khong mo duoc shop sach";
+            return 0;
+        }
+
+        int bought = 0;
+        try {
+            for (int i = 0; i < bookIds.length && bought < maxBuy; ++i) {
+                int bookId = bookIds[i];
+                if (bookId <= 0) {
+                    continue;
+                }
+
+                Item shopItem = findBookShopItem(bookId);
+                if (shopItem == null) {
+                    Service.getInstance().requestItem(SHOP_BOOK);
+                    Auto.sleep(700L);
+                    shopItem = findBookShopItem(bookId);
+                }
+                if (shopItem == null) {
+                    continue;
+                }
+
+                int before = countItemInBag(bookId);
+                Service.getInstance().buyItem1(shopItem.typeUI, shopItem.indexUI, 1);
+                LockGame.g();
+                if (waitItemCountGreater(bookId, before, 2500L)) {
+                    ++bought;
+                }
+                Auto.sleep(250L);
+            }
+        } catch (Exception e) {
+        }
+
+        AutoBuyShop.restoreAfterBuy();
+        if (bought > 0) {
+            GameScr.chatPopup("UpLevelVIP: mua xong " + bought + " sach");
+        }
+        return bought;
+    }
+
+    private static Item findBookShopItem(int bookId) {
+        Item[] items = AutoBuyShop.getShopItems(SHOP_BOOK);
+        if (items == null) {
+            return null;
+        }
+        for (int i = 0; i < items.length; ++i) {
+            Item item = items[i];
+            if (item != null && item.template != null && item.template.id == bookId) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+    private static int countItemInBag(int itemId) {
+        Char me = Char.getMyChar();
+        if (me == null || me.arrItemBag == null) {
+            return 0;
+        }
+        int count = 0;
+        for (int i = 0; i < me.arrItemBag.length; ++i) {
+            Item item = me.arrItemBag[i];
+            if (item != null && item.template != null && item.template.id == itemId) {
+                count += item.quantity > 0 ? item.quantity : 1;
+            }
+        }
+        return count;
+    }
+
+    private static boolean waitItemCountGreater(int itemId, int before, long timeout) {
+        long start = System.currentTimeMillis();
+        while (System.currentTimeMillis() - start < timeout) {
+            if (countItemInBag(itemId) > before) {
+                return true;
+            }
+            Auto.sleep(100L);
+        }
+        return countItemInBag(itemId) > before;
     }
 
     private static int getLearnLevel(SkillTemplate template) {
@@ -630,7 +1114,7 @@ public final class AutoUpFullSupport {
             if (bag != null) {
                 lastGearActionAt = now;
                 statusText = "Mac do " + tier + "x slot " + slot;
-                GameScr.chatPopup("Auto Up Tong: mac do " + tier + "x slot " + slot);
+                GameScr.chatPopup("UpLevelVIP: mac do " + tier + "x slot " + slot);
                 Service.getInstance().useItem(bag.indexUI);
                 Auto.sleep(1000L);
                 return true;
@@ -672,7 +1156,7 @@ public final class AutoUpFullSupport {
     private static boolean buyGear(Char me, int slot, int tier) {
         if (Char.countNullSlot() <= 0) {
             statusText = "Full hanh trang, khong mua do";
-            GameScr.chatPopup("Auto Up Tong: full hanh trang, khong mua do");
+            GameScr.chatPopup("UpLevelVIP: full hanh trang, khong mua do");
             return false;
         }
 
@@ -686,7 +1170,7 @@ public final class AutoUpFullSupport {
             return false;
         }
         statusText = "Mua do lv " + requiredLevel + " slot " + slot;
-        GameScr.chatPopup("Auto Up Tong: mua do lv " + requiredLevel + " slot " + slot);
+        GameScr.chatPopup("UpLevelVIP: mua do lv " + requiredLevel + " slot " + slot);
         AutoBuyShop.restoreAfterBuy();
         Auto.sleep(150L);
         if (!prepareGearShop(slot, shopType)) {
@@ -705,7 +1189,7 @@ public final class AutoUpFullSupport {
         shopItem = resolveShopGearSys(me, shopType, slot, tier, shopItem);
 
         if (shopItem == null) {
-            GameScr.chatPopup("Auto Up Tong: khong thay do lv " + requiredLevel + " shop " + shopType);
+            GameScr.chatPopup("UpLevelVIP: khong thay do lv " + requiredLevel + " shop " + shopType);
             AutoBuyShop.restoreAfterBuy();
             return false;
         }
@@ -715,7 +1199,7 @@ public final class AutoUpFullSupport {
         int buyTypeUI = shopItem.typeUI;
         int buyIndexUI = shopItem.indexUI;
         int before = countGearInBag(me, buyId);
-        GameScr.chatPopup("Auto Up Tong: mua id " + buyId + " lv " + buyLevel + " shop " + buyTypeUI + " index " + buyIndexUI);
+        GameScr.chatPopup("UpLevelVIP: mua id " + buyId + " lv " + buyLevel + " shop " + buyTypeUI + " index " + buyIndexUI);
         Service.getInstance().buyItem1(buyTypeUI, buyIndexUI, 1);
         LockGame.g();
         if (!waitGearInBag(buyId, before, 6000L)) {
@@ -934,13 +1418,17 @@ public final class AutoUpFullSupport {
 
         lastUpgradeActionAt = now;
         statusText = "Dap set " + tier + "x len +" + target;
-        GameScr.chatPopup("Auto Up Tong: dap set " + tier + "x len +" + target);
-        AutoDapDo.startForAutoUp(modeMask, target, FormAutoUpFull.UseXuWhenLackYen, FormAutoUpFull.UseProtectUpgrade);
+        GameScr.chatPopup("UpLevelVIP: dap set " + tier + "x len +" + target);
+        AutoDapDo.startForAutoUp(modeMask, target, FormAutoUpFull.UseXuWhenLackYen, FormAutoUpFull.UseProtectUpgrade, FormAutoUpFull.AutoFlipCrystal, FormAutoUpFull.AutoFlipCrystal, tier);
         return true;
     }
 
     private static int selectReadyUpgradeMask(Char me, int tier, int target, long now) {
         int configured = FormAutoUpFull.getUpgradeModeMask();
+        if (FormAutoUpFull.AutoFlipCrystal) {
+            return selectReadyFlipUpgradeMask(me, tier, target, now, configured);
+        }
+
         int result;
         if ((configured & FormAutoDapDo.MASK_WEAPON) != 0) {
             result = getReadyUpgradeMask(me, UPGRADE_WEAPON_SLOTS, FormAutoDapDo.MASK_WEAPON, tier, target, now);
@@ -966,6 +1454,45 @@ public final class AutoUpFullSupport {
         return 0;
     }
 
+    private static int selectReadyFlipUpgradeMask(Char me, int tier, int target, long now, int configured) {
+        int mask = 0;
+        int result;
+        if ((configured & FormAutoDapDo.MASK_WEAPON) != 0) {
+            result = getFlipUpgradeMask(me, UPGRADE_WEAPON_SLOTS, FormAutoDapDo.MASK_WEAPON, tier, target, now);
+            if (result < 0) {
+                return result;
+            }
+            mask |= result;
+        }
+        if ((configured & FormAutoDapDo.MASK_ADORN) != 0) {
+            result = getFlipUpgradeMask(me, UPGRADE_ADORN_SLOTS, FormAutoDapDo.MASK_ADORN, tier, target, now);
+            if (result < 0) {
+                return result;
+            }
+            mask |= result;
+        }
+        if ((configured & FormAutoDapDo.MASK_CLOTHE) != 0) {
+            result = getFlipUpgradeMask(me, UPGRADE_CLOTHE_SLOTS, FormAutoDapDo.MASK_CLOTHE, tier, target, now);
+            if (result < 0) {
+                return result;
+            }
+            mask |= result;
+        }
+        return mask;
+    }
+
+    private static int getFlipUpgradeMask(Char me, int[] slots, int mask, int tier, int target, long now) {
+        Item item = findNextUpgradeItem(me, slots, tier, target);
+        if (item == null) {
+            return 0;
+        }
+        int moneyState = checkMoneyForUpgrade(me, item, now);
+        if (moneyState < 0) {
+            return -1;
+        }
+        return moneyState == 0 ? 0 : mask;
+    }
+
     private static int getReadyUpgradeMask(Char me, int[] slots, int mask, int tier, int target, long now) {
         Item item = findNextUpgradeItem(me, slots, tier, target);
         if (item == null) {
@@ -983,7 +1510,10 @@ public final class AutoUpFullSupport {
         int required = getRequiredCrystalValueForUpgrade(item);
         int available = getSelectableCrystalValue(me, item, protectSlots, required);
         if (required <= 0 || available < required) {
-            statusText = "Cho nhat da dap " + available + "/" + required;
+            statusText = (FormAutoUpFull.AutoFlipCrystal ? "Lat hinh lay da " : "Cho nhat da dap ") + available + "/" + required;
+            if (FormAutoUpFull.AutoFlipCrystal && Char.countNullSlot() > 7) {
+                return mask;
+            }
             return 0;
         }
         return mask;
@@ -1009,7 +1539,7 @@ public final class AutoUpFullSupport {
     }
 
     private static boolean isUpgradeCandidate(Item item, Char me, int slot, int tier, int target) {
-        return isGearOkForSlot(item, me, slot, tier, true) && item.upgrade < target && item.upgrade < item.q();
+        return isGearOkForSlot(item, me, slot, tier, false) && item.upgrade < target && item.upgrade < item.q();
     }
 
     private static int checkMoneyForUpgrade(Char me, Item item, long now) {
@@ -1046,7 +1576,7 @@ public final class AutoUpFullSupport {
         exchangeYenTried = true;
         lastExchangeYenAt = now;
         statusText = "Doi luong ra yen";
-        GameScr.chatPopup("Auto Up Tong: doi luong ra yen");
+        GameScr.chatPopup("UpLevelVIP: doi luong ra yen");
         Code.setAuto(new AutoNpc(EXCHANGE_YEN_MAP, -1, EXCHANGE_YEN_NPC, "0,4", "", 1, 500));
         return true;
     }
@@ -1213,7 +1743,7 @@ public final class AutoUpFullSupport {
             int slot = slots[i];
             if (slot >= 0 && slot < me.arrItemBody.length) {
                 Item item = me.arrItemBody[slot];
-                if (isGearOkForSlot(item, me, slot, tier, true) && item.upgrade < target && item.upgrade < item.q()) {
+                if (isUpgradeCandidate(item, me, slot, tier, target)) {
                     return true;
                 }
             }
@@ -1347,5 +1877,12 @@ public final class AutoUpFullSupport {
     private static boolean isThuong(int id) {
         return id == 1199 || id == 1200 || id == 1202 || id == 1203 || id == 1204 || id == 1205 || id == 1206
                 || id == 1207 || id == 1208 || id == 1135;
+    }
+
+    private static final class CrystalCompactPlan {
+        int itemId;
+        int count;
+        boolean locked;
+        Item[] items;
     }
 }
